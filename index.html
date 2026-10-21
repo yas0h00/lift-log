@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#C42E1B">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Lift Log">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Lift Log</title>
@@ -401,6 +403,10 @@ input[type=text],input[type=number],input[type=date],select,textarea{border-radi
 #impBar{position:fixed;left:12px;right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:40;box-shadow:0 8px 28px rgba(0,0,0,.35)}
 .plg{display:flex;flex-wrap:wrap;gap:6px}.pl{display:inline-flex;align-items:center;gap:6px;font:600 12.5px var(--mono);border:1px solid var(--line-strong);border-radius:999px;padding:3px 10px}.pl i{width:10px;height:10px;border-radius:3px;border:1px solid var(--line-strong)}
 .rest{flex-wrap:wrap}.rest .adj{color:var(--muted)}.rest.run::after{animation:none;transform:scaleX(var(--p,0));transition:transform .3s linear}
+.plc{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}.plc div{border:1px solid var(--line);border-radius:10px;padding:6px 8px;text-align:center;font-size:12px;color:var(--muted)}.plc b{display:block;font:700 18px var(--mono);color:var(--fg)}.plc .z{opacity:.45}.plc i{display:inline-block;width:9px;height:9px;border-radius:3px;border:1px solid var(--line-strong);margin-right:5px}
+.slbars{position:relative}.slroll{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.7}
+#impBar.impm{inset:0;bottom:0;display:grid;place-items:center;background:rgba(0,0,0,.55);padding:16px;z-index:60;box-shadow:none;border:0;border-radius:0}#impBar.impm[hidden]{display:none}.impm .box{background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;padding:18px;max-width:380px;width:100%}.impm h3{font-size:16px;margin-bottom:8px}.impm ul{list-style:none;padding:0;margin:0 0 8px}.impm li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.impm li.ok b{color:var(--ok,#2E8B3E)}.impm li.warn b{color:var(--pr-dot)}.impm li.bad b{color:var(--accent)}
+.sbset{margin-top:10px}.sbset summary{cursor:pointer;font-size:13px;color:var(--muted)}.sbset input{width:100%;height:42px;margin:4px 0}
 </style>
 </head>
 <body>
@@ -609,10 +615,10 @@ input[type=text],input[type=number],input[type=date],select,textarea{border-radi
 (function(){
 'use strict';
 var LB=2.2046226218, EPS=1e-6;
-var PLATES={kg:[25,20,15,10,5,2.5,1.25], lb:[45,35,25,10,5,2.5]};
-var BARS={kg:[20,15,10], lb:[45,35]}, BN={20:'Olympic',15:'Technique',10:'Training',45:'Olympic',35:"Women's"};
-var PLATE_H={kg:{25:60,20:56,15:48,10:38,5:30,2.5:24,1.25:20}, lb:{45:60,35:52,25:44,10:34,5:28,2.5:22}};
-var PLATE_C={kg:{25:'#D32F2F',20:'#1E5BB8',15:'#E5B400',10:'#2E8B3E',5:'#F2F2F2',2.5:'#2A2A2A',1.25:'#B8BCC2'},
+var PLATES={kg:[25,20,15,10,7.5,5,2.5], lb:[45,35,25,10,5,2.5]};
+var BARS={kg:[20,15,10,0], lb:[45,35]}, BN={20:'Olympic',15:"Women's / tech",10:'EZ curl',0:'Machine / cable',45:'Olympic',35:"Women's"};
+var PLATE_H={kg:{25:60,20:56,15:48,10:38,7.5:34,5:30,2.5:24}, lb:{45:60,35:52,25:44,10:34,5:28,2.5:22}};
+var PLATE_C={kg:{25:'#D32F2F',20:'#1E5BB8',15:'#E5B400',10:'#2E8B3E',7.5:'#E8742A',5:'#F2F2F2',2.5:'#2A2A2A'},
              lb:{45:'#1E5BB8',35:'#E5B400',25:'#2E8B3E',10:'#2A2A2A',5:'#F2F2F2',2.5:'#B8BCC2'}};
 var COMMON=['Back squat','Bench press','Deadlift','Overhead press','Barbell row','Front squat','Romanian deadlift','Incline bench press','Pull-up','Dumbbell curl'];
 var METRICS={e1:{label:'Est. 1RM'},w:{label:'Top weight'},vol:{label:'Volume'}};
@@ -898,10 +904,11 @@ function updatePlates(){
   box.hidden=false;
   var r=plateCalc(w,S.bar,S.unit);
   if(!r){box.innerHTML='<p>'+fmt(w)+' '+S.unit+' is lighter than the '+S.bar+' '+S.unit+' bar.</p>';return}
-  if(!r.list.length){box.innerHTML='<p><b>Bar only</b> ('+S.bar+' '+S.unit+')</p>';return}
+  if(!r.list.length&&!r.left){box.innerHTML='<p><b>Bar only</b> ('+S.bar+' '+S.unit+')</p>';return}
   var txt=r.list.map(function(pn){return (pn[1]>1?pn[1]+' × ':'')+pn[0]}).join(' + ');
+  var cards='<div class="plc">'+PLATES[S.unit].map(function(p){var f=r.list.filter(function(q){return q[0]===p})[0],n=f?f[1]:0;return '<div'+(n?'':' class="z"')+'><b>'+n*2+'</b><span><i style="background:'+PLATE_C[S.unit][p]+'"></i>'+p+' '+S.unit+'</span>'+n+'/side</div>'}).join('')+'</div>';
   var leg=r.list.map(function(pn){return '<span class="pl"><i style="background:'+PLATE_C[S.unit][pn[0]]+'"></i>'+(pn[1]>1?pn[1]+' × ':'')+pn[0]+'</span>'}).join('');
-  box.innerHTML=plateSvg(r.list,S.unit)+'<div class="plg">'+leg+'</div><p>Load each side · '+(BN[S.bar]||'')+' bar '+S.bar+' '+S.unit+'</p>'+(r.left?'<p>Closest loadable weight is '+fmt(r.loaded,2)+' '+S.unit+'.</p>':'');
+  box.innerHTML=plateSvg(r.list,S.unit)+'<div class="plg">'+leg+'</div>'+cards+'<p>Load each side · '+(BN[S.bar]||'')+' bar '+S.bar+' '+S.unit+'</p>'+(r.left?'<p>Closest loadable weight is '+fmt(r.loaded,2)+' '+S.unit+'.</p>':'');
 }
 function renderToday(){
   var box=$('#today'), name=fullName(norm($('#exercise').value)).toLowerCase(), d=$('#date').value||todayStr(), btn=$('#logBtn'), lt=$('#lastTime');
@@ -1196,12 +1203,24 @@ function importData(file){
   fr.readAsText(file);
 }
 function impAsk(o,add,dup,bad){
-  var el=$('#impBar');if(!el){el=document.createElement('div');el.id='impBar';el.className='notice';el.setAttribute('role','alertdialog');document.body.appendChild(el)}
-  if(!add.length){el.hidden=true;toast('Nothing new to import. All '+o.sets.length+' sets are already here'+(bad?' ('+bad+' invalid skipped).':'.'));return}
-  el.innerHTML='<p>Found <b>'+o.sets.length+'</b> sets: <b>'+add.length+'</b> new'+(dup?', '+dup+' duplicate'+(dup>1?'s':'')+' will be skipped':'')+(bad?', '+bad+' invalid ignored':'')+'. Proceed with import?</p><button type="button" class="btn small primary" id="impGo">Import</button><button type="button" class="btn small" id="impNo">Cancel</button>';
-  el.hidden=false;
-  $('#impGo').onclick=function(){el.hidden=true;applyImport(o,add)};
-  $('#impNo').onclick=function(){el.hidden=true;toast('Import cancelled. Nothing was changed.')};
+  var el=$('#impBar');if(!el){el=document.createElement('div');el.id='impBar';document.body.appendChild(el)}
+  BW=BW||bwLoad();SL=SL||slLoad();CD=CD||cdLoad();
+  var hb={},hs={},hc={},nb=0,ns=0,nc=0,rx=/^\d{4}-\d{2}-\d{2}$/;
+  BW.forEach(function(x){hb[x.date]=1});SL.forEach(function(x){hs[x.date]=1});CD.forEach(function(x){hc[x.id]=1});
+  (o.bw||[]).forEach(function(x){if(x&&x.kg>0&&rx.test(x.date)&&!hb[x.date])nb++});
+  (o.sl||[]).forEach(function(x){if(x&&x.h>0&&rx.test(x.date)&&!hs[x.date])ns++});
+  (o.cd||[]).forEach(function(x){if(cdOk(x)&&!hc[x.id])nc++});
+  if(!add.length&&!nb&&!ns&&!nc){el.hidden=true;toast('Nothing new to import. All '+o.sets.length+' sets are already here'+(bad?' ('+bad+' invalid skipped).':'.'));return}
+  var ds=add.map(function(x){return x.date}).sort(), rng=ds.length?(ds[0]===ds[ds.length-1]?fmtDate(ds[0],1):fmtDate(ds[0],1)+' to '+fmtDate(ds[ds.length-1],1)):'';
+  function row(l,n,c){return '<li class="'+(c||'')+'"><span>'+l+'</span><b>'+n+'</b></li>'}
+  el.className='impm';el.hidden=false;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Import check');
+  el.innerHTML='<div class="box"><h3>Check before importing</h3><ul>'+row('Sets in file',o.sets.length)+row('New sets',add.length,add.length?'ok':'')+row('Duplicates (skipped)',dup,dup?'warn':'')+row('Corrupted (ignored)',bad,bad?'bad':'')+(nb?row('New bodyweight entries',nb):'')+(ns?row('New sleep nights',ns):'')+(nc?row('New cardio sessions',nc):'')+'</ul>'+(rng?'<p class="hint">New sets cover '+esc(rng)+'.</p>':'')+'<p class="hint">Nothing is overwritten. Your current log stays as it is.</p><div class="chips"><button type="button" class="btn small primary" id="impGo">Import '+add.length+(add.length===1?' set':' sets')+'</button><button type="button" class="btn small" id="impNo">Cancel</button></div></div>';
+  function close(){el.hidden=true;document.removeEventListener('keydown',esc2)}
+  function esc2(e){if(e.key==='Escape'){close();toast('Import cancelled. Nothing was changed.')}}
+  document.addEventListener('keydown',esc2);
+  $('#impGo').onclick=function(){close();applyImport(o,add)};
+  $('#impNo').onclick=function(){close();toast('Import cancelled. Nothing was changed.')};
+  $('#impGo').focus();
 }
 function applyImport(o,add){
     try{
@@ -1217,7 +1236,11 @@ function applyImport(o,add){
 /* ---------- rest timer, week summary, bodyweight ---------- */
 var rest={end:0,len:90,t:null,ac:null};
 try{rest.len=Number(localStorage.getItem('liftlog.rest'))||90;rest.manual=!!localStorage.getItem('liftlog.rest')}catch(e){}
-function autoRest(n){n=n.toLowerCase();if(/squat|deadlift|hip thrust/.test(n)&&S.eq==='bb')return 180;if(/bench|press|row|pull-?up|chin|dip/.test(n)&&(S.eq==='bb'||S.eq==='bw'||S.eq==='wbw'))return 120;if(/curl|raise|extension|fly|pushdown|calf|face pull|crunch/.test(n))return 60;return 90}
+function autoRest(n){n=n.toLowerCase();
+  if(/squat|deadlift|hip thrust/.test(n)&&S.eq==='bb'&&!/split|goblet/.test(n))return 180;
+  if(/curl|raise|extension|fly|pushdown|calf|face pull|crunch|shrug/.test(n))return 60;
+  if(/squat|deadlift|thrust|bench|press|row|pull|chin|dip|lunge/.test(n))return 120;
+  return 90}
 function restTick(){var l=Math.ceil((rest.end-Date.now())/1000);if(l<=0){restStop(true);return}document.querySelector('#rest .rt').textContent=Math.floor(l/60)+':'+pad(l%60);$('#rest').style.setProperty('--p',Math.max(0,Math.min(1,1-l/(rest.tot||rest.len))))}
 function restStart(){
   rest.tot=rest.len;rest.end=Date.now()+rest.len*1000;$('#rest').hidden=false;clearInterval(rest.t);rest.t=setInterval(restTick,250);restTick();if(FX.rest)FX.rest(rest.len);
@@ -1226,8 +1249,9 @@ function restStart(){
 }
 function restStop(done){
   clearInterval(rest.t);$('#rest').hidden=true;if(!done)return;
-  try{var a=rest.ac,o=a.createOscillator(),g=a.createGain();o.connect(g);g.connect(a.destination);o.frequency.value=880;g.gain.value=0.25;o.start();o.stop(a.currentTime+0.6)}catch(e){}
-  try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}
+  var mute=false;try{mute=localStorage.getItem('liftlog.fx')==='off'}catch(e){}
+  if(!mute){try{var a=rest.ac;if(a.state==='suspended')a.resume();[880,1109,1319].forEach(function(f,i){var o=a.createOscillator(),g=a.createGain(),t=a.currentTime+i*.16;o.type='triangle';o.frequency.value=f;o.connect(g);g.connect(a.destination);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.3,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.4);o.start(t);o.stop(t+.42)})}catch(e){}
+  try{if(navigator.vibrate)navigator.vibrate([200,100,200])}catch(e){}}
   toast('Rest over. Next set.');
 }
 document.addEventListener('visibilitychange',function(){if(!document.hidden&&!$('#rest').hidden)restTick()});
@@ -1287,15 +1311,24 @@ function renderSleep(){
   S.sets.forEach(function(x){if(!x.wu)tr[x.date]=1});
   SL.forEach(function(x){(tr[x.date]?T:R).push(x.h)});
   function col(h){return h>=7?'var(--ok,#2E8B3E)':h>=6?'var(--pr-dot)':'var(--accent)'}
+  var ra=l7.map(function(x){var i=SL.indexOf(x);return av(SL.slice(Math.max(0,i-6),i+1).map(function(y){return y.h}))});
+  var roll='<svg class="slroll" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline fill="none" stroke="var(--fg)" stroke-width="2" vector-effect="non-scaling-stroke" points="'+ra.map(function(v,i){return ((i+.5)/l7.length*100).toFixed(1)+','+(100-Math.min(100,v*10)).toFixed(1)}).join(' ')+'"/></svg>';
+  var vol={};S.sets.forEach(function(x){if(!x.wu)vol[x.date]=(vol[x.date]||0)+x.kg*x.reps*(x.sd||1)});
+  function corr(){var P=SL.filter(function(x){return vol[x.date]}),n=P.length;if(n<5)return '<p class="hint">Log sleep on 5+ training days to see how it lines up with your volume.</p>';
+    var mx=av(P.map(function(x){return x.h})),my=av(P.map(function(x){return vol[x.date]})),a=0,b=0,c=0;
+    P.forEach(function(x){var dx=x.h-mx,dy=vol[x.date]-my;a+=dx*dy;b+=dx*dx;c+=dy*dy});if(!b||!c)return '';
+    var r=a/Math.sqrt(b*c),m=Math.abs(r),w=m<.2?'no clear link':m<.5?'a weak link':'a clear link';
+    return '<p class="hint" style="margin-top:6px">Sleep vs training volume across <b>'+n+'</b> training days: r = <b>'+fmt(r,2)+'</b>, '+w+(m>=.2?(r>0?' (more sleep, more volume)':' (more sleep, less volume)'):'')+'. A pattern, not proof of cause.</p>'}
   function wd(d){var q=d.split('-');return new Date(q[0],q[1]-1,q[2]).toLocaleDateString(undefined,{weekday:'short'})}
   el.innerHTML='<div class="wk"><div>Last night<b>'+fmt(last,1)+' h</b>'+(last>=7?'on target':'under 7 h')+'</div><div>7-night avg<b>'+fmt(a7,1)+' h</b>goal 8 h</div><div>Nights 7 h+<b>'+good+'/'+l7.length+'</b>this week</div></div>'+
-    '<div class="slplot"><div class="sg"><em>8 h</em></div><div class="slbars">'+l7.map(function(x){return '<i title="'+esc(x.date)+': '+fmt(x.h,2)+' h" style="height:'+Math.max(4,Math.min(100,x.h*10))+'%;background:'+col(x.h)+'"></i>'}).join('')+'</div></div>'+
+    '<div class="slplot"><div class="sg"><em>8 h</em></div><div class="slbars">'+l7.map(function(x){return '<i title="'+esc(x.date)+': '+fmt(x.h,2)+' h" style="height:'+Math.max(4,Math.min(100,x.h*10))+'%;background:'+col(x.h)+'"></i>'}).join('')+roll+'</div></div>'+
     '<div class="slx">'+l7.map(function(x){return '<span><b>'+fmt(x.h,1)+'</b>'+esc(wd(x.date))+'</span>'}).join('')+'</div>'+
-    (T.length>=2&&R.length>=2?'<p class="hint" style="margin-top:10px">Before training days <b>'+fmt(av(T),1)+' h</b> · before rest days <b>'+fmt(av(R),1)+' h</b></p>':'');
+    (T.length>=2&&R.length>=2?'<p class="hint" style="margin-top:10px">Before training days <b>'+fmt(av(T),1)+' h</b> · before rest days <b>'+fmt(av(R),1)+' h</b></p>':'')+corr()+'<p class="hint">Green is 7 h or more, amber 6 to 7 h, red under 6 h. The line is your 7-night average.</p>';
 }
 
 /* ---------- cloud sync (Supabase) ---------- */
-var SB_URL='https://ffrtxazwhurvbyiuztmr.supabase.co', SB_KEY='sb_publishable_LEhlt9m1WKg8qSL7RGhXOQ_MloskutF';
+var SBC=(function(){try{return JSON.parse(localStorage.getItem('liftlog.sbcfg'))||{}}catch(e){return{}}})();
+var SB_URL=SBC.url||'https://ffrtxazwhurvbyiuztmr.supabase.co', SB_KEY=SBC.key||'sb_publishable_LEhlt9m1WKg8qSL7RGhXOQ_MloskutF';
 var sb=null, SU=null, syncing=false, syncMsg='Not synced yet', syncT=null;
 var K_SYN='liftlog.synced', K_PD='liftlog.pendingdel', K_SPD='liftlog.splitdirty';
 function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
@@ -1363,6 +1396,23 @@ async function acctAuth(isNew){
   }catch(e){m.textContent='Could not reach the server.'}
 }
 async function acctOut(){try{await sb.auth.signOut()}catch(e){}jset(K_SYN,{});jset(K_PD,[]);SU=null;setSync('Not synced yet');renderAcct();toast('Signed out. Your log stays on this phone.')}
+var SB_SQL=['create table if not exists sets(id text primary key,user_id uuid not null default auth.uid() references auth.users on delete cascade,exercise text,kg numeric,reps int,date date,ts bigint,wu boolean,rpe numeric,note text);',
+'create table if not exists bodyweight(user_id uuid not null default auth.uid() references auth.users on delete cascade,date date,kg numeric,primary key(user_id,date));',
+'create table if not exists sleep(user_id uuid not null default auth.uid() references auth.users on delete cascade,date date,hours numeric,primary key(user_id,date));',
+'create table if not exists split(user_id uuid primary key default auth.uid() references auth.users on delete cascade,data jsonb);',
+'alter table sets enable row level security;alter table bodyweight enable row level security;alter table sleep enable row level security;alter table split enable row level security;',
+'create policy "own rows" on sets for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
+'create policy "own rows" on bodyweight for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
+'create policy "own rows" on sleep for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
+'create policy "own rows" on split for all using(user_id=auth.uid()) with check(user_id=auth.uid());'].join('\n');
+var _renderAcct=renderAcct;
+renderAcct=function(){_renderAcct();var el=$('#acct');if(!el)return;
+  el.insertAdjacentHTML('beforeend','<details class="sbset"><summary>Cloud sync setup</summary><p class="hint">Use your own Supabase project. Run the SQL once in its SQL editor, then paste the project URL and publishable key here.</p><input type="url" id="sbUrl" placeholder="https://your-project.supabase.co" value="'+esc(SBC.url||'')+'"><input type="text" id="sbKey" placeholder="Publishable key (sb_publishable_…)" value="'+esc(SBC.key||'')+'" autocomplete="off"><div class="chips"><button type="button" class="chip" data-sb="save">Save and reload</button><button type="button" class="chip" data-sb="sql">Copy SQL</button>'+(SBC.url?'<button type="button" class="chip" data-sb="reset">Use default</button>':'')+'</div><p class="hint">'+(SBC.url?'Using your project.':'Using the built-in project.')+'</p></details>')};
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-sb]');if(!b)return;var a=b.dataset.sb;
+  if(a==='sql'){(navigator.clipboard?navigator.clipboard.writeText(SB_SQL):Promise.reject()).then(function(){toast('SQL copied.')},function(){toast('Could not copy. Select the SQL in your browser and try again.')})}
+  else if(a==='reset'){try{localStorage.removeItem('liftlog.sbcfg')}catch(x){}location.reload()}
+  else if(a==='save'){var u=norm($('#sbUrl').value).replace(/\/+$/,''),k=norm($('#sbKey').value);if(!/^https:\/\/[a-z0-9-]+\.supabase\.(co|in)$/i.test(u)||k.length<20)return toast('Enter a URL like https://abc.supabase.co and your publishable key.');try{localStorage.setItem('liftlog.sbcfg',JSON.stringify({url:u,key:k}))}catch(x){}location.reload()}
+});
 function sbInit(){
   if(sb||!window.supabase){renderAcct();return}
   try{sb=window.supabase.createClient(SB_URL,SB_KEY)}catch(e){renderAcct();return}
@@ -1699,6 +1749,20 @@ document.addEventListener('click',function(e){
   var i=b.dataset.step?$('#'+b.dataset.step):$('#weight');i.classList.remove('tick');void i.offsetWidth;i.classList.add('tick');buzz(6)});
 var pv=$('#preview'),was=false;
 new MutationObserver(function(){var n=pv.classList.contains('pr');if(n&&!was)buzz(10);was=n}).observe(pv,{attributes:true,attributeFilter:['class']});
+})();
+</script>
+<script>
+(function(){
+var base=location.href.split('#')[0].split('?')[0];
+var icon='data:image/svg+xml,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" fill="#14161a"/><circle cx="256" cy="256" r="180" fill="none" stroke="#C42E1B" stroke-width="44"/><circle cx="256" cy="256" r="100" fill="none" stroke="#F4F4F4" stroke-width="36"/><circle cx="256" cy="256" r="30" fill="#C42E1B"/></svg>');
+var man={name:'Lift Log',short_name:'Lift Log',start_url:base,scope:base.replace(/[^\/]*$/,''),display:'standalone',background_color:'#14161a',theme_color:'#C42E1B',icons:[{src:icon,sizes:'any',type:'image/svg+xml',purpose:'any maskable'}]};
+try{if(!document.querySelector('link[rel=manifest]')){var l=document.createElement('link');l.rel='manifest';l.href=URL.createObjectURL(new Blob([JSON.stringify(man)],{type:'application/manifest+json'}));document.head.appendChild(l)}}catch(e){}
+if(!('serviceWorker' in navigator)||!/^https:|^http:\/\/(localhost|127\.)/.test(location.protocol+'//'+location.host))return;
+var SW="var C='liftlog-v1';\nself.addEventListener('install',function(e){self.skipWaiting();e.waitUntil(caches.open(C).then(function(c){return c.addAll([self.registration.scope])}).catch(function(){}))});\nself.addEventListener('activate',function(e){e.waitUntil(caches.keys().then(function(k){return Promise.all(k.filter(function(x){return x!==C}).map(function(x){return caches.delete(x)}))}).then(function(){return self.clients.claim()}))});\nself.addEventListener('fetch',function(e){var r=e.request;if(r.method!=='GET')return;var u=new URL(r.url);if(/supabase\\.(co|in)$/.test(u.hostname))return;\ne.respondWith(fetch(r).then(function(res){if(res&&(res.ok||res.type==='opaque')){var cp=res.clone();caches.open(C).then(function(c){c.put(r,cp)})}return res}).catch(function(){return caches.match(r).then(function(m){return m||(r.mode==='navigate'?caches.match(self.registration.scope):Response.error())})}))});\n";
+function viaFile(){return navigator.serviceWorker.register('sw.js')}
+window.addEventListener('load',function(){
+  try{navigator.serviceWorker.register(URL.createObjectURL(new Blob([SW],{type:'text/javascript'}))).catch(viaFile).catch(function(){})}catch(e){viaFile().catch(function(){})}
+});
 })();
 </script>
 </body>
