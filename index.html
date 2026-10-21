@@ -379,7 +379,7 @@ h2::before{content:"";width:4px;height:17px;border-radius:2px;background:var(--a
 .donut{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:12px 24px}.donut svg{width:170px;max-width:100%;margin:0}
 .ins .dn1{font:700 22px var(--display);fill:var(--fg)}
 .dleg{display:grid;gap:6px;font-size:13px;min-width:150px}.dleg li{display:flex;align-items:center;gap:8px}.dleg i{width:10px;height:10px;border-radius:3px;flex:none}.dleg b{margin-left:auto;padding-left:12px;font-variant-numeric:tabular-nums}
-.big4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.big4{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}.big4>.bigc:last-child:nth-child(odd){grid-column:1/-1}
 .bigc{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px;box-shadow:var(--shadow);min-width:0}
 .bigc .bl{font-size:13px;color:var(--muted)}.bigc b{font:700 30px/1.1 var(--display);font-variant-numeric:tabular-nums}.bigc small{font:500 13px var(--body);color:var(--muted)}
 .bigc .bs{font-size:12px;color:var(--muted)}.bigc .bs.ok{color:var(--ok);font-weight:600}.bigc.none{opacity:.6}
@@ -586,7 +586,7 @@ input[type=text],input[type=number],input[type=date],select,textarea{border-radi
     <section class="panel splitp" data-tab="split" aria-labelledby="h-split">
       <div class="phead">
         <h2 id="h-split">Workout split</h2>
-        <button type="button" class="btn small" data-act="addDay">Add day</button>
+        <span style="display:flex;gap:6px"><button type="button" class="btn small" data-act="addRest">Add rest day</button><button type="button" class="btn small" data-act="addDay">Add day</button></span>
       </div>
       <div id="splitBody"></div>
       <div class="offmgr" id="offMgr"></div>
@@ -1066,7 +1066,7 @@ function validDays(a){
   if(!Array.isArray(a))return [];
   return a.filter(function(d){return d&&typeof d.id==='string'&&typeof d.name==='string'&&Array.isArray(d.exercises)}).map(function(d){
     var wd=Number(d.weekday);
-    return {id:d.id,name:d.name,exercises:d.exercises.filter(function(x){return typeof x==='string'&&x}),weekday:(wd>=0&&wd<=6)?wd:-1};
+    return {id:d.id,name:d.name,exercises:d.exercises.filter(function(x){return typeof x==='string'&&x}),weekday:(wd>=0&&wd<=6)?wd:-1,rest:!!d.rest};
   });
 }
 function saveSplit(){
@@ -1081,18 +1081,59 @@ function parseLines(txt){
   String(txt).split('\n').forEach(function(l){var n=norm(l);if(n&&!seen[n.toLowerCase()]&&out.length<20){seen[n.toLowerCase()]=1;out.push(n)}});
   return out;
 }
+function baseEx(n){return String(n).toLowerCase().replace(/ · single$/,'')}
+function dstr(dn){var d=new Date(dn*864e5);return d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1)+'-'+pad(d.getUTCDate())}
+/* works out which split day each past session was. Shared lifts (bench in Push and Upper) are settled by how many of the day's lifts you did, then by what was due next. */
+function rotation(){
+  var n=S.split.length,res={n:n,map:{},last:null,dates:[]};if(!n)return res;
+  var byD={};S.sets.forEach(function(x){if(x.wu)return;(byD[x.date]=byD[x.date]||{})[baseEx(x.exercise)]=1});
+  var ds=Object.keys(byD).sort().slice(-120),exp=0;res.dates=ds;
+  var nm=S.split.map(function(d){var o={};d.exercises.forEach(function(e){o[e.toLowerCase()]=1});return o});
+  ds.forEach(function(dt){
+    var best=-1,bs=0,bd=99;
+    S.split.forEach(function(d,i){if(d.rest)return;var sc=0;Object.keys(byD[dt]).forEach(function(e){if(nm[i][e])sc++});
+      var dist=(i-exp+n)%n;if(sc>bs||(sc===bs&&sc>0&&dist<bd)){best=i;bs=sc;bd=dist}});
+    if(best<0)return;res.map[dt]=best;res.last={idx:best,date:dt};
+    var j=(best+1)%n,g=0;while(S.split[j].rest&&g++<n)j=(j+1)%n;exp=j});
+  return res}
+FX.restMap=function(){var R={},n=S.split.length;if(!n||!S.split.some(function(d){return d.rest}))return R;
+  var rot=rotation(),td=dayNum(todayStr());
+  rot.dates.forEach(function(dt,i){var si=rot.map[dt];if(si==null)return;var r=0,j=(si+1)%n;while(S.split[j].rest&&r<n){r++;j=(j+1)%n}
+    var nx=rot.dates[i+1],lim=nx?dayNum(nx)-1:td;for(var k=1;k<=r&&dayNum(dt)+k<=lim;k++)R[dstr(dayNum(dt)+k)]=1});
+  if(rot.dates.length){var wk={};S.split.forEach(function(d){if(d.rest&&d.weekday>=0)wk[d.weekday]=1});
+    for(var q=dayNum(rot.dates[0]);q<=td;q++)if(wk[new Date(q*864e5).getUTCDay()])R[dstr(q)]=1}
+  return R};
+function addRest(){var d={id:newId(),name:'Rest',exercises:[],weekday:-1,rest:true},a=S.split.slice(),i=a.findIndex(function(x){return /^legs?\b/i.test(x.name)});
+  a.splice(i>=0?i+1:a.length,0,d);S.split=a;saveSplit();renderSplit();renderDayPicker();toast('Rest day added'+(i>=0?' after '+a[i].name:'')+'. Move it with the arrows if needed.')}
+function missedDay(){
+  /* a scheduled day from the last 3 days with no matching sets since, and not skipped */
+  if(!S.sets.length)return null;
+  var first=S.sets.reduce(function(m,x){return x.date<m?x.date:m},todayStr()), skip=jget('liftlog.skipmiss',{}), td=todayStr();
+  for(var k=1;k<=3;k++){
+    var dt=new Date();dt.setDate(dt.getDate()-k);var ds=ymd(dt);if(ds<first)break;
+    var d=S.split.find(function(x){return x.weekday===dt.getDay()});
+    if(!d||!d.exercises.length||skip[ds]===d.id)continue;
+    var names={};d.exercises.forEach(function(n){names[n.toLowerCase()]=1});
+    var done=S.sets.some(function(x){return !x.wu&&x.date>=ds&&x.date<=td&&names[x.exercise.toLowerCase().replace(/ · single$/,'')]});
+    if(!done)return {d:d,date:ds,k:k,wk:(WD.filter(function(w){return w[0]===dt.getDay()})[0]||[0,''])[1]};
+  }
+  return null;
+}
 function suggestDay(){
   if(!S.split.length)return null;
-  var wd=new Date().getDay(), t=S.split.find(function(d){return d.weekday===wd});
-  if(t)return {id:t.id,why:'Today'};
-  var bi=-1,bdate='';
-  S.split.forEach(function(d,i){
-    var ld='';
-    d.exercises.forEach(function(n){var ex=S.A.map.get(n.toLowerCase());if(ex&&ex.lastDate>ld)ld=ex.lastDate});
-    if(ld&&ld>=bdate){bdate=ld;bi=i}
-  });
-  if(bi<0)return {id:S.split[0].id,why:'Up next'};
-  return {id:S.split[(bi+1)%S.split.length].id,why:'Up next'};
+  var wd=new Date().getDay(), t=S.split.find(function(d){return d.weekday===wd}), m=missedDay();
+  if(m){var r={id:m.d.id,why:m.k===1?'Missed yesterday':'Missed '+m.wk,miss:m};if(t&&t.id!==m.d.id)r.alt={id:t.id,why:'Today'};return r}
+  if(t)return {id:t.id,why:t.rest?'Rest today':'Today'};
+  var R=rotation(),n=S.split.length,first=S.split.find(function(d){return !d.rest});
+  if(!first)return null;
+  if(!R.last)return {id:first.id,why:'Up next'};
+  var bi=R.last.idx,gap=dayNum(todayStr())-dayNum(R.last.date),j=(bi+1)%n,rs=[];
+  while(S.split[j].rest&&rs.length<n){rs.push(j);j=(j+1)%n}
+  var nx=S.split[j];
+  if(!rs.length)return {id:nx.id,why:'Up next'};
+  if(gap===0)return {id:nx.id,why:'After rest'};
+  if(gap<=rs.length)return {id:S.split[rs[gap-1]].id,why:'Rest today',alt:{id:nx.id,why:'Up next'}};
+  return {id:nx.id,why:'Up next'};
 }
 function renderDayPicker(){
   var chips=$('#dayChips'), exs=$('#dayEx'), lbl=$('#dayLabel');
@@ -1105,16 +1146,19 @@ function renderDayPicker(){
   var sg=suggestDay();
   if(!S.split.some(function(d){return d.id===S.day}))S.day=sg?sg.id:S.split[0].id;
   chips.innerHTML=S.split.map(function(d){
-    var tag=(sg&&sg.id===d.id)?'<span class="tag">'+esc(sg.why)+'</span>':'';
+    var tag=(sg&&sg.id===d.id)?'<span class="tag">'+esc(sg.why)+'</span>':(sg&&sg.alt&&sg.alt.id===d.id)?'<span class="tag">'+esc(sg.alt.why)+'</span>':'';
     return '<button type="button" class="chip" data-day="'+esc(d.id)+'" aria-pressed="'+(d.id===S.day)+'">'+esc(d.name)+tag+'</button>';
   }).join('');
   var day=S.split.find(function(d){return d.id===S.day}), td=todayStr(), cnt={};
   S.A.sorted.forEach(function(s){if(s.date===td){var k=s.exercise.toLowerCase();cnt[k]=(cnt[k]||0)+1}});
-  exs.innerHTML=day.exercises.length?day.exercises.map(function(n){
+  var mh=(sg&&sg.miss&&S.day===sg.id)?'<p class="hint" style="width:100%">You missed '+esc(sg.miss.d.name)+' '+(sg.miss.k===1?'yesterday':'on '+esc(sg.miss.wk))+'. Do it today'+(sg.alt?' (your '+esc(S.split.find(function(x){return x.id===sg.alt.id}).name)+' day is still one tap away)':'')+', or <button type="button" class="linkbtn" data-skipmiss="'+esc(sg.miss.date+'|'+sg.miss.d.id)+'">skip it</button>.</p>':'';
+  exs.innerHTML=mh+(day.exercises.length?day.exercises.map(function(n){
     var c=cnt[n.toLowerCase()]||0;
     return '<button type="button" class="chip" data-pick="'+esc(n)+'">'+esc(n)+(c?'<span class="cnt" aria-label="'+c+' sets today">'+c+'</span>':'')+'</button>';
-  }).join(''):'<p class="hint">No exercises in '+esc(day.name)+' yet. Add them in Workout split.</p>';
+  }).join(''):(day.rest?'<p class="hint" style="width:100%">Rest day. Your streak stays alive. Pick another day above if you train anyway.</p>':'<p class="hint">No exercises in '+esc(day.name)+' yet. Add them in Workout split.</p>'));
 }
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-skipmiss]');if(!b)return;
+  var p=b.dataset.skipmiss.split('|'),o=jget('liftlog.skipmiss',{});o[p[0]]=p[1];jset('liftlog.skipmiss',o);S.day=null;renderDayPicker();toast('Skipped. Back to your normal schedule.')});
 function pickExercise(name){
   $('#exercise').value=name;$('#isBar').checked=isBarbell(name);
   var ex=S.A.map.get(name.toLowerCase());
@@ -1137,8 +1181,8 @@ function renderSplit(){
     var opts='<option value="-1"'+(d.weekday===-1?' selected':'')+'>Any day</option>'+WD.map(function(w){return '<option value="'+w[0]+'"'+(d.weekday===w[0]?' selected':'')+'>'+w[1]+'</option>'}).join('');
     return '<div class="dcard" data-did="'+esc(d.id)+'">'+
       '<div class="dtop"><input type="text" data-f="name" value="'+esc(d.name)+'" maxlength="30" aria-label="Day name"><select data-f="weekday" aria-label="Weekday for '+esc(d.name)+'">'+opts+'</select></div>'+
-      '<span class="lbl">Exercises, one per line</span>'+
-      '<textarea data-f="exercises" rows="5" aria-label="Exercises for '+esc(d.name)+'">'+esc(d.exercises.join('\n'))+'</textarea>'+
+      (d.rest?'<p class="hint">Rest day. Your streak stays alive and the cycle moves on to the next day.</p>':'<span class="lbl">Exercises, one per line</span>'+
+      '<textarea data-f="exercises" rows="5" aria-label="Exercises for '+esc(d.name)+'">'+esc(d.exercises.join('\n'))+'</textarea>')+
       '<div class="dact"><span>'+(sg&&sg.id===d.id?'<span class="badge pr">'+esc(sg.why)+'</span>':'')+'</span><div class="hact">'+
         '<button type="button" class="icon" data-act="mvUp" data-id="'+esc(d.id)+'" aria-label="Move '+esc(d.name)+' up"'+(i===0?' disabled':'')+'>'+up+'</button>'+
         '<button type="button" class="icon" data-act="mvDn" data-id="'+esc(d.id)+'" aria-label="Move '+esc(d.name)+' down"'+(i===S.split.length-1?' disabled':'')+'>'+dn+'</button>'+
@@ -1467,7 +1511,7 @@ document.addEventListener('click',function(e){
     else if(a==='delDay')delDay(b.dataset.id);
     else if(a==='mvUp')moveDay(b.dataset.id,-1);
     else if(a==='mvDn')moveDay(b.dataset.id,1);
-    else if(a==='tpl')applyTpl(b.dataset.tpl);
+    else if(a==='tpl')applyTpl(b.dataset.tpl);else if(a==='addRest')addRest();
     else if(a==='export')exportData();
     else if(a==='import')$('#importFile').click();
   }
@@ -1511,7 +1555,7 @@ if(window.ResizeObserver){new ResizeObserver(function(){var w=Math.floor(host.cl
 /* ---------- insights: weekly volume, muscle split, max trend, big four, bodyweight ---------- */
 var MC={Chest:'#0A84FF',Back:'#30D158',Legs:'#FF9F0A',Shoulders:'#BF5AF2',Arms:'#FF453A',Other:'#8E8E93'};
 var DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-var BIG=[['Bench press',['bench press','barbell bench press','flat bench press']],['Squat',['back squat','barbell squat','squat']],['Deadlift',['deadlift','conventional deadlift']],['Overhead press',['overhead press','ohp','shoulder press','military press']]];
+var BIG=[['Bench press',['bench press','barbell bench press','flat bench press']],['Squat',['back squat','barbell squat','squat']],['Overhead press',['overhead press','ohp','shoulder press','military press']],['Pull-ups',['pull-up','pull-ups','pull up','pull ups','pullup','pullups','chin-up','chin-ups','weighted pull-up','weighted pull-ups'],1],['Double bar dips',['double bar dips','double bar dip','dips','dip','weighted dip','weighted dips','parallel bar dip','parallel bar dips'],1]];
 function addD(d,n){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x}
 function monOf(d){return addD(d,-((d.getDay()+6)%7))}
 function pdate(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
@@ -1565,6 +1609,15 @@ function trendCard(){
 function bigFour(){
   var cut=ymd(addD(new Date(),-30));
   return '<div class="big4">'+BIG.map(function(b){
+    if(b[2]){
+      var exs=[],all=[];b[1].forEach(function(n){var e=S.A.map.get(n);if(e&&exs.indexOf(e)<0)exs.push(e)});
+      exs.forEach(function(e){e.sets.forEach(function(x){if(!x.wu)all.push(x)})});
+      if(!all.length)return '<div class="bigc none"><span class="bl">'+b[0]+'</span><b>—</b><span class="bs">Not logged yet</span></div>';
+      var wt=all.filter(function(x){return (x.add||0)>0}),best,num,un,lab;
+      if(wt.length){best=wt.reduce(function(a,x){return (x.add>a.add||(x.add===a.add&&x.reps>a.reps))?x:a});num='+'+fmtW(best.add);un=S.unit;lab=' · best added'}
+      else{best=all.reduce(function(a,x){return x.reps>a.reps?x:a});num=best.reps;un='reps';lab=' · most reps'}
+      var main=exs.reduce(function(a,e){return e.sets.length>a.sets.length?e:a}),pd=exs.reduce(function(a,e){return e.lastPR&&e.lastPR>a?e.lastPR:a},''),pr=pd&&pd>=cut;
+      return '<button type="button" class="bigc" data-ex="'+esc(main.key)+'"><span class="bl">'+b[0]+lab+'</span><b>'+num+' <small>'+un+'</small></b><span class="bs'+(pr?' ok':'')+'">'+(pr?'★ PR · '+esc(fmtDate(pd,true)):(wt.length?'× '+best.reps+' · ':'')+esc(fmtDate(best.date,true)))+'</span></button>'}
     var ex=null,i;for(i=0;i<b[1].length&&!ex;i++)ex=S.A.map.get(b[1][i])||null;
     if(!ex)return '<div class="bigc none"><span class="bl">'+b[0]+'</span><b>—</b><span class="bs">Not logged yet</span></div>';
     var pr=ex.lastPR&&ex.lastPR>=cut;
@@ -1703,14 +1756,14 @@ function spin(){lg.classList.remove('spin');void lg.offsetWidth;lg.classList.add
 spin();
 /* streaks */
 function days(sets,extra){var m={};sets.forEach(function(s){if(!s.wu)m[s.date]=1});if(extra)m[extra]=1;return m}
-function streak(m){var d=new Date();if(!m[ymd(d)])d.setDate(d.getDate()-1);var n=0;while(m[ymd(d)]){n++;d.setDate(d.getDate()-1)}return n}
+function streak(m){var R=(FX.restMap&&FX.restMap())||{},d=new Date();if(!m[ymd(d)])d.setDate(d.getDate()-1);var n=0,g=0;while(g++<400){var k=ymd(d);if(m[k])n++;else if(!R[k])break;d.setDate(d.getDate()-1)}return n}
 var seen={};
 FX.render=function(){
   var st=FX.state(),el=$('#strip');
   if(!st.ready||!st.sets.length){el.hidden=true;return}
-  var m=days(st.sets),n=streak(m),d=new Date(),dow=(d.getDay()+6)%7,L='MTWTFSS',h='',c=0;
-  for(var j=0;j<7;j++){var k=ymd(new Date(d.getFullYear(),d.getMonth(),d.getDate()-dow+j)),t=!!m[k];if(t)c++;
-    h+='<span class="sd'+(t?' on':'')+(j===dow?' td':'')+(t&&seen._&&!seen[k]?' pop':'')+'"><i>'+(t?'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':'')+'</i>'+L[j]+'</span>';seen[k]=t}
+  var m=days(st.sets),n=streak(m),R=(FX.restMap&&FX.restMap())||{},d=new Date(),dow=(d.getDay()+6)%7,L='MTWTFSS',h='',c=0;
+  for(var j=0;j<7;j++){var k=ymd(new Date(d.getFullYear(),d.getMonth(),d.getDate()-dow+j)),t=!!m[k],rs=!t&&!!R[k];if(t)c++;
+    h+='<span class="sd'+(t?' on':'')+(rs?' rs':'')+(j===dow?' td':'')+(t&&seen._&&!seen[k]?' pop':'')+'"><i>'+((t||rs)?'<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>':'')+'</i>'+L[j]+'</span>';seen[k]=t}
   seen._=1;
   el.setAttribute('aria-label',c+' of 7 days trained this week, '+n+' day streak');
   el.innerHTML='<div class="sdays">'+h+'</div><div class="fl'+(n?' lit':'')+'"><svg viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg><b>'+n+'</b><span>day streak</span></div>';
