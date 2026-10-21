@@ -406,7 +406,7 @@ input[type=text],input[type=number],input[type=date],select,textarea{border-radi
 .plc{display:grid;grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:6px}.plc div{border:1px solid var(--line);border-radius:10px;padding:6px 8px;text-align:center;font-size:12px;color:var(--muted)}.plc b{display:block;font:700 18px var(--mono);color:var(--fg)}.plc .z{opacity:.45}.plc i{display:inline-block;width:9px;height:9px;border-radius:3px;border:1px solid var(--line-strong);margin-right:5px}
 .slbars{position:relative}.slroll{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;opacity:.7}
 #impBar.impm{inset:0;bottom:0;display:grid;place-items:center;background:rgba(0,0,0,.55);padding:16px;z-index:60;box-shadow:none;border:0;border-radius:0}#impBar.impm[hidden]{display:none}.impm .box{background:var(--surface);border:1px solid var(--line-strong);border-radius:14px;padding:18px;max-width:380px;width:100%}.impm h3{font-size:16px;margin-bottom:8px}.impm ul{list-style:none;padding:0;margin:0 0 8px}.impm li{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line);font-size:14px}.impm li.ok b{color:var(--ok,#2E8B3E)}.impm li.warn b{color:var(--pr-dot)}.impm li.bad b{color:var(--accent)}
-.sbset{margin-top:10px}.sbset summary{cursor:pointer;font-size:13px;color:var(--muted)}.sbset input{width:100%;height:42px;margin:4px 0}
+.sbset{margin-top:10px}.sbset summary{cursor:pointer;font-size:13px;color:var(--muted)}.sbset input{width:100%;height:42px;margin:4px 0}.ov{color:var(--ok,#2E8B3E);font-weight:600}
 </style>
 </head>
 <body>
@@ -646,7 +646,7 @@ function fmtDate(s,short){
   return dt.toLocaleDateString(undefined,o);
 }
 function fmtDay(n){return new Date(n*864e5).toLocaleDateString(undefined,{day:'numeric',month:'short',timeZone:'UTC'})}
-function e1rm(kg,reps){return reps<=1?kg:kg*(1+Math.min(reps,12)/30)}
+function e1rm(kg,reps,rpe){if(rpe>=6&&rpe<=10)reps+=10-rpe;return reps<=1?kg:kg*(1+Math.min(reps,12)/30)}
 function isBarbell(name){return /squat|bench|deadlift|press|row|clean|snatch|thruster|hip thrust/i.test(name)&&!/dumbbell|\bdb\b|machine|cable|leg press|seated/i.test(name)}
 function niceTicks(lo,hi,n){
   if(hi-lo<1e-9){var p=Math.max(1,Math.abs(hi)*0.1);lo-=p;hi+=p}
@@ -707,7 +707,7 @@ function analyze(){
     var k=s.exercise.toLowerCase(), ex=map.get(k);
     if(!ex){ex={key:k,name:s.exercise,sets:[],bestE:null,bestW:null,lastPR:null,lastDate:s.date,dayMap:new Map()};map.set(k,ex)}
     ex.name=s.exercise;ex.lastDate=s.date;
-    var e=e1rm(s.kg,s.reps), first=ex.sets.length===0;
+    var e=e1rm(s.kg,s.reps,s.rpe), first=ex.sets.length===0;
     s.e1=e;
     s.prE=!first&&e>ex.bestE.e1+EPS;
     s.prW=!first&&s.kg>ex.bestW.kg+EPS;
@@ -737,7 +737,20 @@ function analyze(){
 function curEx(){return S.A&&S.sel?S.A.map.get(S.sel)||null:null}
 
 /* ---------- render ---------- */
-function renderAll(){
+function renderDeload(){
+  var el=$('#offBar');if(!el||!S.ready)return;
+  var now=new Date(),mon=monOf(now),wk=[0,0,0,0,0,0],r7=0,cut7=ymd(addD(now,-7));
+  S.sets.forEach(function(x){if(x.wu)return;var v=x.kg*x.reps*(x.sd||1);if(x.date>=cut7)r7+=v;var i=Math.floor((dayNum(ymd(mon))-dayNum(x.date)+6)/7);if(i>=0&&i<6)wk[5-i]+=v});
+  var key=ymd(mon),msg='';
+  try{if(localStorage.getItem('liftlog.deload')===key){el.hidden=true;return}}catch(e){}
+  if(wk[4]<wk[3]*.7){el.hidden=true;return}
+  if(wk[1]>0&&wk[2]>wk[1]&&wk[3]>wk[2]&&wk[4]>wk[3])msg='Your weekly volume has gone up four weeks in a row. A lighter week, about 60% of your usual sets, helps you recover.';
+  else{SL=SL||slLoad();var l7=SL.slice(-7),b=(wk[2]+wk[3]+wk[4])/3;
+    if(l7.length>=4&&b>0&&r7>b*1.1){var a=l7.reduce(function(p,c){return p+c.h},0)/l7.length;if(a<7)msg='You averaged '+fmt(a,1)+' h of sleep while your volume is up. Consider a lighter week or an extra rest day.'}}
+  if(!msg){el.hidden=true;return}
+  el.hidden=false;el.innerHTML='<p>'+esc(msg)+'</p><button type="button" class="btn small" data-deload="'+key+'">Not now</button>'}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-deload]');if(!b)return;try{localStorage.setItem('liftlog.deload',b.dataset.deload)}catch(x){}$('#offBar').hidden=true});
+function renderAll(){try{renderDeload()}catch(e){}
   S.A=analyze();
   if(!S.A.map.has(S.sel)){S.sel=S.A.list.length?S.A.list[0].key:null;S.hover=null}
   renderUnits();renderMeta();renderNotice();renderDatalist();renderPRs();renderChips();drawChart();renderHist();renderDayPicker();updatePreview();renderWeek();renderSleep();renderInsights();if(FX.render)FX.render();
@@ -910,13 +923,28 @@ function updatePlates(){
   var leg=r.list.map(function(pn){return '<span class="pl"><i style="background:'+PLATE_C[S.unit][pn[0]]+'"></i>'+(pn[1]>1?pn[1]+' × ':'')+pn[0]+'</span>'}).join('');
   box.innerHTML=plateSvg(r.list,S.unit)+'<div class="plg">'+leg+'</div>'+cards+'<p>Load each side · '+(BN[S.bar]||'')+' bar '+S.bar+' '+S.unit+'</p>'+(r.left?'<p>Closest loadable weight is '+fmt(r.loaded,2)+' '+S.unit+'.</p>':'');
 }
+function overload(name){
+  var ex=S.A&&name?S.A.map.get(name.toLowerCase()):null;if(!ex)return null;
+  var last='';ex.sets.forEach(function(x){if(!x.wu&&x.date>last)last=x.date});if(!last)return null;
+  var b=ex.sets.filter(function(x){return !x.wu&&x.date===last}).reduce(function(a,x){return (x.kg>a.kg||(x.kg===a.kg&&x.reps>a.reps))?x:a});
+  var q=(b.eq&&EQ[b.eq])?b.eq:(guessEq(name)||'mc'),bwq=!!EQ[q].bw,w=toU(bwq?(b.add||0):b.kg),r=b.reps,rp=b.rpe,n=name.toLowerCase();
+  var top=(/squat|deadlift|hip thrust/.test(n)&&q==='bb')?6:/curl|raise|extension|fly|pushdown|calf|face pull|crunch|shrug|lateral|glute|pec deck/.test(n)?15:10;
+  var st={bb:5,db:S.unit==='kg'?2.5:5,mc:5,bw:S.unit==='kg'?2.5:5,wbw:S.unit==='kg'?2.5:5,as:5}[q]||5;
+  function lab(v){return bwq?(q==='as'?'BW−'+fmt(v):v>0?'BW+'+fmt(v):'BW'):fmt(v)}
+  var tw=w,tr=r,note='';
+  if(rp>=9.5)note=' That was close to max, so repeat it before adding.';
+  else if(r>=top){tw=q==='as'?Math.max(0,w-st):w+st;
+    if(q==='bb'){var sm=PLATES[S.unit][PLATES[S.unit].length-1];if(tw>=S.bar)tw=S.bar+Math.round((tw-S.bar)/(2*sm))*2*sm}
+    tr=Math.max(1,Math.round(top*.6));note=' (more weight)'}
+  else{tr=r+1;note=' (one more rep)'}
+  return 'Last '+lab(w)+' × '+r+(rp?' @ RPE '+rp:'')+'. Try '+lab(tw)+' × '+tr+'.'+(rp>=9.5?note:note)}
 function renderToday(){
   var box=$('#today'), name=fullName(norm($('#exercise').value)).toLowerCase(), d=$('#date').value||todayStr(), btn=$('#logBtn'), lt=$('#lastTime');
   var list=name?S.sets.filter(function(x){return x.date===d&&x.exercise.toLowerCase()===name}).sort(function(a,b){return (a.ts||0)-(b.ts||0)}):[];
   btn.textContent=name?'Log set '+(list.filter(function(x){return !x.wu}).length+1):'Log set';
   var ex=(S.A&&name)?S.A.map.get(name):null, prev=null;
   if(ex)ex.days.forEach(function(x){if(x.date<d)prev=x.date});
-  if(prev){lt.hidden=false;lt.innerHTML='Last time ('+esc(fmtDate(prev,true))+'): <b>'+ex.sets.filter(function(x){return x.date===prev}).map(function(x){return ld(x)+'×'+x.reps}).join(', ')+'</b>'}else{lt.hidden=true}
+  var ov=overload(name),h2=ov?'<br><span class="ov">'+esc(ov)+'</span>':'';if(!prev&&ov){lt.hidden=false;lt.innerHTML=h2.slice(4)}else if(prev){lt.hidden=false;lt.innerHTML='Last time ('+esc(fmtDate(prev,true))+'): <b>'+ex.sets.filter(function(x){return x.date===prev}).map(function(x){return ld(x)+'×'+x.reps}).join(', ')+'</b>'+h2}else{lt.hidden=true}
   if(!list.length){box.hidden=true;box.innerHTML='';return}
   var n=0;box.hidden=false;
   box.innerHTML='<span class="lbl2">Sets so far · tap one to reuse it</span>'+list.map(function(x,i){
@@ -931,7 +959,7 @@ function updatePreview(){
   if(!(w>=0&&r>=1)||(!q.bw&&!(w>0))){el.className='preview';el.textContent='Enter weight and reps to see your estimated 1RM.';updatePlates();return}
   var kg=effKg(w);
   if(!(kg>0)){el.className='preview';el.textContent=q.bw&&!latestBw()?'Log your bodyweight in Progress first, so reps count at your real load.':'Assistance is more than your bodyweight.';updatePlates();return}
-  var e=e1rm(kg,r), ex=(S.A&&name)?S.A.map.get(name.toLowerCase()):null;
+  var e=e1rm(kg,r,parseFloat($('#rpe').value)), ex=(S.A&&name)?S.A.map.get(name.toLowerCase()):null;
   var html=(q.bw?'Load <b>'+fmt(toU(kg))+' '+S.unit+'</b> · ':'')+'Est. 1RM <b>'+fmt(toU(e))+' '+S.unit+'</b>', cls='preview';
   if(ex){
     var diff=e-ex.bestE.e1;
@@ -961,11 +989,12 @@ async function submitSet(ev){
   if(!(r>=1&&r<=100)||Number($('#reps').value)!==r)return formErr('Enter whole reps between 1 and 100.','#reps');
   if(toKg(w)>1000)return formErr('That weight looks too high. Check the number.','#weight');
   if(date>todayStr())return formErr('That date is in the future.','#date');
+  if(S.sets.some(function(x){return x.exercise===name&&x.reps===r&&x.date===date&&Math.abs(x.kg-eff)<1e-6&&Date.now()-(x.ts||0)<4000}))return toast('That set was just logged.');
   if($('#logBtn').disabled)return;
   $('#logBtn').disabled=true;var data={exercise:name,kg:Math.round(eff*10000)/10000,reps:r,date:date,ts:Date.now()};
   var rp=parseFloat($('#rpe').value), nt=norm($('#note').value);
   data.eq=S.eq;if(q.bw){data.add=Math.round(toKg(w)*1e4)/1e4;data.bw=latestBw()}if(S.eq==='db'||S.side==='each')data.sd=2;if($('#isWu').checked)data.wu=true;if(rp>=1&&rp<=10)data.rpe=rp;if(nt)data.note=nt.slice(0,80);
-  var ex=S.A.map.get(name.toLowerCase()), e=e1rm(data.kg,r), msg='Logged '+name+' '+fmtW(data.kg)+' '+S.unit+' × '+r;
+  var ex=S.A.map.get(name.toLowerCase()), e=e1rm(data.kg,r,data.rpe), msg='Logged '+name+' '+fmtW(data.kg)+' '+S.unit+' × '+r;
   if(data.wu)msg='Warm-up logged · '+name+' '+fmtW(data.kg)+' '+S.unit+' × '+r;else if(ex){if(e>ex.bestE.e1+EPS)msg+=' · new PR';else if(data.kg>ex.bestW.kg+EPS)msg+=' · heaviest yet'}
   try{
     var fxi={name:name,wu:!!data.wu,date:date,reps:r,u:S.unit,w:fmtW(data.kg),key:name.toLowerCase(),first:!S.sets.some(function(x){return x.date===date&&!x.wu}),pr:!data.wu&&!!ex&&e>ex.bestE.e1+EPS,hv:!data.wu&&!!ex&&data.kg>ex.bestW.kg+EPS,to:fmtW(e),gain:ex?fmtW(Math.max(0,e-ex.bestE.e1)):'0'};
@@ -1384,8 +1413,10 @@ store.del=async function(id){if(SU&&jget(K_SYN,{})[id]){var pd=jget(K_PD,[]);pd.
 store.put=async function(id){jset(K_PD,jget(K_PD,[]).filter(function(x){return x!==id}));return _put.apply(this,arguments)};
 function schedSync(ms){clearTimeout(syncT);syncT=setTimeout(syncNow,ms==null?1500:ms)}
 function setSync(m){syncMsg=m;var e=$('#syncSt');if(e)e.textContent=m}
-function toRow(x){return {id:x.id,exercise:x.exercise,kg:x.kg,reps:x.reps,date:x.date,ts:x.ts||null,wu:x.wu||null,rpe:x.rpe||null,note:x.note||null}}
-function fromRow(r){var o={id:r.id,exercise:r.exercise,kg:Number(r.kg),reps:r.reps,date:r.date,ts:r.ts==null?undefined:Number(r.ts)};if(r.wu)o.wu=true;if(r.rpe!=null)o.rpe=Number(r.rpe);if(r.note)o.note=r.note;return o}
+var sbNoX=false;
+function toRow(x){return {id:x.id,exercise:x.exercise,kg:x.kg,reps:x.reps,date:x.date,ts:x.ts||null,wu:x.wu||null,rpe:x.rpe||null,note:x.note||null,eq:x.eq||null,add_kg:x.add==null?null:x.add,bw:x.bw==null?null:x.bw,sd:x.sd||null}}
+function stripX(r){var o=Object.assign({},r);delete o.eq;delete o.add_kg;delete o.bw;delete o.sd;return o}
+function fromRow(r){var o={id:r.id,exercise:r.exercise,kg:Number(r.kg),reps:r.reps,date:r.date,ts:r.ts==null?undefined:Number(r.ts)};if(r.wu)o.wu=true;if(r.rpe!=null)o.rpe=Number(r.rpe);if(r.note)o.note=r.note;if(r.eq)o.eq=r.eq;if(r.add_kg!=null)o.add=Number(r.add_kg);if(r.bw!=null)o.bw=Number(r.bw);if(r.sd)o.sd=Number(r.sd);return o}
 async function syncNow(){
   if(!sb||!SU||S.mode==='db')return;
   if(!S.ready){schedSync(500);return}
@@ -1400,8 +1431,10 @@ async function syncNow(){
     var keep=S.sets.filter(function(x){return rids[x.id]||!syn[x.id]});
     keep.forEach(function(x){have[x.id]=1});
     var add=rem.filter(function(x){return !have[x.id]}).map(fromRow).filter(validSet);
-    var up=keep.filter(function(x){return !rids[x.id]}).map(toRow);
-    for(var i=0;i<up.length;i+=500)chk(await sb.from('sets').upsert(up.slice(i,i+500)));
+    var hasX=rem.length?('eq' in rem[0]):true,rmap={};rem.forEach(function(x){rmap[x.id]=x});sbNoX=!hasX;
+    var up=keep.filter(function(x){return !rids[x.id]||(hasX&&(x.eq||x.sd||x.add||x.bw)&&rmap[x.id].eq==null&&rmap[x.id].sd==null)}).map(toRow);
+    for(var i=0;i<up.length;i+=500){var part=up.slice(i,i+500),rr=await sb.from('sets').upsert(sbNoX?part.map(stripX):part);
+      if(rr.error&&!sbNoX&&/column|schema cache/i.test(rr.error.message||'')){sbNoX=true;rr=await sb.from('sets').upsert(part.map(stripX))}chk(rr)}
     S.sets=keep.concat(add);syn={};S.sets.forEach(function(x){syn[x.id]=1});jset(K_SYN,syn);lsSave();
     BW=BW||bwLoad();
     var rb=chk(await sb.from('bodyweight').select('date,kg')),hb={};
@@ -1419,7 +1452,7 @@ async function syncNow(){
     var rs=chk(await sb.from('split').select('data').limit(1));
     if(!rs.length||jget(K_SPD,0)){if(S.split.length||!rs.length){chk(await sb.from('split').upsert({user_id:SU.id,data:S.split}));jset(K_SPD,0)}}
     else{S.split=validDays(rs[0].data);rawSaveSplit();renderSplit()}
-    renderAll();setSync('Synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}));
+    renderAll();setSync('Synced '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})+(sbNoX?'. Run the updated SQL in Cloud sync setup to also sync equipment details.':''));
   }catch(e){setSync('Sync failed: '+(e&&e.message?e.message:'offline')+'. Will retry.')}
   syncing=false;
 }
@@ -1440,7 +1473,8 @@ async function acctAuth(isNew){
   }catch(e){m.textContent='Could not reach the server.'}
 }
 async function acctOut(){try{await sb.auth.signOut()}catch(e){}jset(K_SYN,{});jset(K_PD,[]);SU=null;setSync('Not synced yet');renderAcct();toast('Signed out. Your log stays on this phone.')}
-var SB_SQL=['create table if not exists sets(id text primary key,user_id uuid not null default auth.uid() references auth.users on delete cascade,exercise text,kg numeric,reps int,date date,ts bigint,wu boolean,rpe numeric,note text);',
+var SB_SQL=['create table if not exists sets(id text primary key,user_id uuid not null default auth.uid() references auth.users on delete cascade,exercise text,kg numeric,reps int,date date,ts bigint,wu boolean,rpe numeric,note text,eq text,add_kg numeric,bw numeric,sd int);',
+'alter table sets add column if not exists eq text,add column if not exists add_kg numeric,add column if not exists bw numeric,add column if not exists sd int;',
 'create table if not exists bodyweight(user_id uuid not null default auth.uid() references auth.users on delete cascade,date date,kg numeric,primary key(user_id,date));',
 'create table if not exists sleep(user_id uuid not null default auth.uid() references auth.users on delete cascade,date date,hours numeric,primary key(user_id,date));',
 'create table if not exists split(user_id uuid primary key default auth.uid() references auth.users on delete cascade,data jsonb);',
@@ -1531,7 +1565,7 @@ $('#logForm').addEventListener('submit',submitSet);
 $('#importFile').addEventListener('change',function(e){var f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value=''});
 ['#exercise','#weight','#reps','#date'].forEach(function(s){$(s).addEventListener('input',function(){formErr('');updatePreview()})});
 $('#exercise').addEventListener('change',function(){$('#isBar').checked=isBarbell($('#exercise').value);updatePreview()});
-$('#isBar').addEventListener('change',updatePlates);
+$('#isBar').addEventListener('change',updatePlates);$('#rpe').addEventListener('change',updatePreview);
 $('#barSel').addEventListener('change',function(){S.bar=parseFloat($('#barSel').value);savePrefs();updatePlates()});
 $('#onlyEx').addEventListener('change',function(){S.onlyEx=$('#onlyEx').checked;S.histLimit=40;renderHist()});
 var host=$('#chart');
@@ -1555,7 +1589,7 @@ if(window.ResizeObserver){new ResizeObserver(function(){var w=Math.floor(host.cl
 /* ---------- insights: weekly volume, muscle split, max trend, big four, bodyweight ---------- */
 var MC={Chest:'#0A84FF',Back:'#30D158',Legs:'#FF9F0A',Shoulders:'#BF5AF2',Arms:'#FF453A',Other:'#8E8E93'};
 var DN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
-var BIG=[['Bench press',['bench press','barbell bench press','flat bench press']],['Squat',['back squat','barbell squat','squat']],['Overhead press',['overhead press','ohp','shoulder press','military press']],['Pull-ups',['pull-up','pull-ups','pull up','pull ups','pullup','pullups','chin-up','chin-ups','weighted pull-up','weighted pull-ups'],1],['Double bar dips',['double bar dips','double bar dip','dips','dip','weighted dip','weighted dips','parallel bar dip','parallel bar dips'],1]];
+var BIG=[['Bench press',['bench press','barbell bench press','flat bench press']],['Squat',['back squat','barbell squat','squat']],['Overhead press',['overhead press','ohp','shoulder press','military press']],['Pull-ups',['pull-up','pull-ups','pull up','pull ups','pullup','pullups','chin-up','chin-ups','weighted pull-up','weighted pull-ups'],1],['Double bar dips',['double bar dips','double bar dip','dips','dip','weighted dip','weighted dips','tricep dips','tricep dip','parallel bar dip','parallel bar dips'],1]];
 function addD(d,n){var x=new Date(d.getFullYear(),d.getMonth(),d.getDate());x.setDate(x.getDate()+n);return x}
 function monOf(d){return addD(d,-((d.getDay()+6)%7))}
 function pdate(s){var p=s.split('-').map(Number);return new Date(p[0],p[1]-1,p[2])}
