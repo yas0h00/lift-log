@@ -1,0 +1,647 @@
+{
+ "app": "lift-log",
+ "version": 1,
+ "exportedAt": "2026-10-22T10:36:57.291Z",
+ "unit": "kg",
+ "sets": [
+  {
+   "id": "smvcbyr7uv1si7",
+   "exercise": "Lying leg curl",
+   "kg": 65,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792237553993
+  },
+  {
+   "id": "smvcbz9fa1ae3p",
+   "exercise": "Lying leg curl",
+   "kg": 70,
+   "reps": 10,
+   "date": "2026-10-17",
+   "ts": 1792237577589
+  },
+  {
+   "id": "smvcc0u54n0itx",
+   "exercise": "Lying leg curl",
+   "kg": 75,
+   "reps": 5,
+   "date": "2026-10-17",
+   "ts": 1792237651096
+  },
+  {
+   "id": "smvcdlorr61ayz",
+   "exercise": "Pendulum squat",
+   "kg": 20,
+   "reps": 8,
+   "date": "2026-10-17",
+   "ts": 1792240303526,
+   "wu": true
+  },
+  {
+   "id": "smvcdmvrwcx8k0",
+   "exercise": "Pendulum squat",
+   "kg": 80,
+   "reps": 8,
+   "date": "2026-10-17",
+   "ts": 1792240359260
+  },
+  {
+   "id": "smvcdn9kr43mnt",
+   "exercise": "Pendulum squat",
+   "kg": 120,
+   "reps": 8,
+   "date": "2026-10-17",
+   "ts": 1792240377147
+  },
+  {
+   "id": "smvcdo30v5rb9j",
+   "exercise": "Pendulum squat",
+   "kg": 150,
+   "reps": 6,
+   "date": "2026-10-17",
+   "ts": 1792240415311
+  },
+  {
+   "id": "smvcdoc7h4hhzi",
+   "exercise": "Pendulum squat",
+   "kg": 170,
+   "reps": 4,
+   "date": "2026-10-17",
+   "ts": 1792240427212
+  },
+  {
+   "id": "smvcekypbn9zi5",
+   "exercise": "Reclined leg extensions",
+   "kg": 70,
+   "reps": 24,
+   "date": "2026-10-17",
+   "ts": 1792241949358
+  },
+  {
+   "id": "smvcel9m38cmb5",
+   "exercise": "Reclined leg extensions",
+   "kg": 75,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792241963499
+  },
+  {
+   "id": "smvcge9xxhlf21",
+   "exercise": "Reclined leg extensions",
+   "kg": 75,
+   "reps": 24,
+   "date": "2026-10-17",
+   "ts": 1792244996565
+  },
+  {
+   "id": "smvcgecyb1kntg",
+   "exercise": "Reclined leg extensions",
+   "kg": 75,
+   "reps": 24,
+   "date": "2026-10-17",
+   "ts": 1792245000467
+  },
+  {
+   "id": "smvcgeknue60xx",
+   "exercise": "Bridged hip abduction",
+   "kg": 75,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792245010458
+  },
+  {
+   "id": "smvcgelm330rt8",
+   "exercise": "Bridged hip abduction",
+   "kg": 75,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792245011691
+  },
+  {
+   "id": "smvcgemhjidd1j",
+   "exercise": "Bridged hip abduction",
+   "kg": 75,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792245012823
+  },
+  {
+   "id": "smvcgeu1y72y7c",
+   "exercise": "Standing calf raise",
+   "kg": 40,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792245022630
+  },
+  {
+   "id": "smvcgev30s78e4",
+   "exercise": "Standing calf raise",
+   "kg": 40,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792245023964
+  },
+  {
+   "id": "smvcgf1t6qcjbv",
+   "exercise": "Standing calf raise",
+   "kg": 60,
+   "reps": 15,
+   "date": "2026-10-17",
+   "ts": 1792245032682
+  },
+  {
+   "id": "smvcgfdn3j7r62",
+   "exercise": "Romanian deadlift",
+   "kg": 25,
+   "reps": 12,
+   "date": "2026-10-17",
+   "ts": 1792245048015
+  },
+  {
+   "id": "smvcgfk1r0gg1a",
+   "exercise": "Romanian deadlift",
+   "kg": 30,
+   "reps": 10,
+   "date": "2026-10-17",
+   "ts": 1792245056319
+  },
+  {
+   "id": "smvcgfqdcymm7a",
+   "exercise": "Romanian deadlift",
+   "kg": 35,
+   "reps": 8,
+   "date": "2026-10-17",
+   "ts": 1792245064512
+  },
+  {
+   "id": "smvcgfu4zphjg5",
+   "exercise": "Romanian deadlift",
+   "kg": 40,
+   "reps": 8,
+   "date": "2026-10-17",
+   "ts": 1792245069394
+  },
+  {
+   "id": "smvf69clcv7ytc",
+   "exercise": "Incline barbell bench press",
+   "kg": 40,
+   "reps": 20,
+   "date": "2026-10-19",
+   "ts": 1792409369087,
+   "wu": true
+  },
+  {
+   "id": "smvf6fp71mgamr",
+   "exercise": "Incline barbell bench press",
+   "kg": 80,
+   "reps": 15,
+   "date": "2026-10-19",
+   "ts": 1792409665357,
+   "note": "Easy"
+  },
+  {
+   "id": "smvf6m7cccuox1",
+   "exercise": "Incline barbell bench press",
+   "kg": 120,
+   "reps": 6,
+   "date": "2026-10-19",
+   "ts": 1792409968811,
+   "note": "Better than last week"
+  },
+  {
+   "id": "smvf6uey5lxgdc",
+   "exercise": "Incline barbell bench press",
+   "kg": 130,
+   "reps": 3,
+   "date": "2026-10-19",
+   "ts": 1792410351916
+  },
+  {
+   "id": "smvf7at4ee8ldt",
+   "exercise": "Machine shoulder press",
+   "kg": 20,
+   "reps": 12,
+   "date": "2026-10-19",
+   "ts": 1792411116782
+  },
+  {
+   "id": "smvf7b9pd31uvl",
+   "exercise": "Machine shoulder press",
+   "kg": 25,
+   "reps": 11,
+   "date": "2026-10-19",
+   "ts": 1792411138272
+  },
+  {
+   "id": "smvf7nekkxi81l",
+   "exercise": "Machine shoulder press",
+   "kg": 30,
+   "reps": 6,
+   "date": "2026-10-19",
+   "ts": 1792411704451,
+   "note": "Feel heavy"
+  },
+  {
+   "id": "smvf7tfhfizqox",
+   "exercise": "Pec deck",
+   "kg": 70,
+   "reps": 15,
+   "date": "2026-10-19",
+   "ts": 1792411985571,
+   "note": "Lil struggle 1st set"
+  },
+  {
+   "id": "smvf7z50gd3wan",
+   "exercise": "Pec deck",
+   "kg": 75,
+   "reps": 14,
+   "date": "2026-10-19",
+   "ts": 1792412251935
+  },
+  {
+   "id": "smvf82lyrbjt9a",
+   "exercise": "Pec deck",
+   "kg": 80,
+   "reps": 8,
+   "date": "2026-10-19",
+   "ts": 1792412413874
+  },
+  {
+   "id": "smvf890raxbm3o",
+   "exercise": "High cable lateral raise",
+   "kg": 5,
+   "reps": 12,
+   "date": "2026-10-19",
+   "ts": 1792412712982
+  },
+  {
+   "id": "smvf8a46g8vydp",
+   "exercise": "High cable lateral raise",
+   "kg": 5,
+   "reps": 8,
+   "date": "2026-10-19",
+   "ts": 1792412764071
+  },
+  {
+   "id": "smvf8bskrbbnwx",
+   "exercise": "High cable lateral raise",
+   "kg": 10,
+   "reps": 7,
+   "date": "2026-10-19",
+   "ts": 1792412842347
+  },
+  {
+   "id": "smvfblseaefub1",
+   "exercise": "Tricep dips",
+   "kg": 93,
+   "reps": 6,
+   "date": "2026-10-19",
+   "ts": 1792418347521,
+   "eq": "bw",
+   "add": 0,
+   "bw": 93
+  },
+  {
+   "id": "smvfbly6ahyypo",
+   "exercise": "Tricep dips",
+   "kg": 93,
+   "reps": 5,
+   "date": "2026-10-19",
+   "ts": 1792418355009,
+   "eq": "bw",
+   "add": 0,
+   "bw": 93
+  },
+  {
+   "id": "smvfbmajk7k2xj",
+   "exercise": "Overhead cable triceps extension",
+   "kg": 25,
+   "reps": 12,
+   "date": "2026-10-19",
+   "ts": 1792418371039
+  },
+  {
+   "id": "smvfbmjzztrsq0",
+   "exercise": "Overhead cable triceps extension",
+   "kg": 30,
+   "reps": 12,
+   "date": "2026-10-19",
+   "ts": 1792418383294
+  },
+  {
+   "id": "smvfbmrj6q3e11",
+   "exercise": "Overhead cable triceps extension",
+   "kg": 35,
+   "reps": 12,
+   "date": "2026-10-19",
+   "ts": 1792418393058
+  },
+  {
+   "id": "smvhzsbmjq4mz4",
+   "exercise": "Close-grip lat pulldown",
+   "kg": 55,
+   "reps": 15,
+   "date": "2026-10-21",
+   "ts": 1792579895515
+  },
+  {
+   "id": "smvhzxdyvbv5o0",
+   "exercise": "Close-grip lat pulldown",
+   "kg": 60,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792580131831
+  },
+  {
+   "id": "smvi0329kln6jy",
+   "exercise": "Close-grip lat pulldown",
+   "kg": 65,
+   "reps": 6,
+   "date": "2026-10-21",
+   "ts": 1792580396599
+  },
+  {
+   "id": "smvi12qa9a9iwg",
+   "exercise": "Reverse cable fly",
+   "kg": 20,
+   "reps": 12,
+   "date": "2026-10-21",
+   "ts": 1792582060689,
+   "note": "Single hand"
+  },
+  {
+   "id": "smvi12xy7885u6",
+   "exercise": "Reverse cable fly",
+   "kg": 25,
+   "reps": 12,
+   "date": "2026-10-21",
+   "ts": 1792582070623
+  },
+  {
+   "id": "smvi137xkwrv55",
+   "exercise": "Reverse cable fly",
+   "kg": 30,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792582083560
+  },
+  {
+   "id": "smvi13u8h9efo8",
+   "exercise": "Chest-supported machine row",
+   "kg": 40,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792582112464
+  },
+  {
+   "id": "smvi1439xyx46h",
+   "exercise": "Chest-supported machine row",
+   "kg": 45,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792582124181
+  },
+  {
+   "id": "smvi1496ngtta8",
+   "exercise": "Chest-supported machine row",
+   "kg": 50,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792582131838
+  },
+  {
+   "id": "smvi1c1f856s94",
+   "exercise": "Trapezius shrugs",
+   "kg": 50,
+   "reps": 17,
+   "date": "2026-10-21",
+   "ts": 1792582495028
+  },
+  {
+   "id": "smvi1iqry5zgqf",
+   "exercise": "Trapezius shrugs",
+   "kg": 60,
+   "reps": 15,
+   "date": "2026-10-21",
+   "ts": 1792582807822
+  },
+  {
+   "id": "smvi1m4xrd4l94",
+   "exercise": "Trapezius shrugs",
+   "kg": 65,
+   "reps": 15,
+   "date": "2026-10-21",
+   "ts": 1792582966142
+  },
+  {
+   "id": "smvi1tkz0gsonh",
+   "exercise": "Trapezius shrugs",
+   "kg": 35,
+   "reps": 15,
+   "date": "2026-10-21",
+   "ts": 1792583313515,
+   "note": "Dumbbells one hand 35",
+   "eq": "db",
+   "sd": 2
+  },
+  {
+   "id": "smvi21agk9qd5d",
+   "exercise": "Horizontal close-grip cable row",
+   "kg": 35,
+   "reps": 15,
+   "date": "2026-10-21",
+   "ts": 1792583673140
+  },
+  {
+   "id": "smvi21gwlxpwve",
+   "exercise": "Horizontal close-grip cable row",
+   "kg": 65,
+   "reps": 8,
+   "date": "2026-10-21",
+   "ts": 1792583681492
+  },
+  {
+   "id": "smvi26l3j68co2",
+   "exercise": "Incline seated dumbbell curl",
+   "kg": 10,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792583920207,
+   "note": "Dumbbells",
+   "eq": "db",
+   "sd": 2
+  },
+  {
+   "id": "smvi2aqdc05r4e",
+   "exercise": "Incline seated dumbbell curl",
+   "kg": 12,
+   "reps": 8,
+   "date": "2026-10-21",
+   "ts": 1792584113663,
+   "eq": "db",
+   "sd": 2
+  },
+  {
+   "id": "smvi2b6setydfs",
+   "exercise": "Incline seated dumbbell curl",
+   "kg": 7,
+   "reps": 8,
+   "date": "2026-10-21",
+   "ts": 1792584134941,
+   "note": "Lil struggle hands locked",
+   "eq": "db",
+   "sd": 2
+  },
+  {
+   "id": "smvi2nc98aq5ho",
+   "exercise": "Reverse curl",
+   "kg": 20,
+   "reps": 15,
+   "date": "2026-10-21",
+   "ts": 1792584701900
+  },
+  {
+   "id": "smvi2ox1htgjjy",
+   "exercise": "Reverse curl",
+   "kg": 25,
+   "reps": 12,
+   "date": "2026-10-21",
+   "ts": 1792584775492
+  },
+  {
+   "id": "smvi2sstskzil1",
+   "exercise": "Reverse curl",
+   "kg": 25,
+   "reps": 10,
+   "date": "2026-10-21",
+   "ts": 1792584956656
+  },
+  {
+   "id": "smvi31w0bcip8m",
+   "exercise": "Machine preacher curl",
+   "kg": 25,
+   "reps": 12,
+   "date": "2026-10-21",
+   "ts": 1792585380683
+  },
+  {
+   "id": "smvi34625uhung",
+   "exercise": "Machine preacher curl",
+   "kg": 30,
+   "reps": 7,
+   "date": "2026-10-21",
+   "ts": 1792585487020
+  },
+  {
+   "id": "smvi3ac2j1ijh4",
+   "exercise": "Machine preacher curl",
+   "kg": 30,
+   "reps": 7,
+   "date": "2026-10-21",
+   "ts": 1792585774746
+  }
+ ],
+ "bw": [
+  {
+   "date": "2026-10-18",
+   "kg": 93
+  }
+ ],
+ "sl": [
+  {
+   "date": "2026-10-18",
+   "h": 8.35
+  },
+  {
+   "date": "2026-10-19",
+   "h": 4.5
+  },
+  {
+   "date": "2026-10-20",
+   "h": 8.3
+  },
+  {
+   "date": "2026-10-21",
+   "h": 9
+  },
+  {
+   "date": "2026-10-22",
+   "h": 8.4
+  }
+ ],
+ "cd": [],
+ "split": [
+  {
+   "id": "smvf5xp9xmlm0c",
+   "name": "Push",
+   "exercises": [
+    "Incline barbell bench press",
+    "Machine shoulder press",
+    "Pec deck",
+    "High cable lateral raise",
+    "Overhead cable triceps extension",
+    "Cable triceps pushdown"
+   ],
+   "weekday": 1,
+   "rest": false
+  },
+  {
+   "id": "smvc9m7rqyjmby",
+   "name": "Pull",
+   "exercises": [
+    "Close-grip lat pulldown",
+    "Chest-supported machine row",
+    "Horizontal close-grip cable row",
+    "Reverse cable fly",
+    "Trapezius shrugs",
+    "Beijing cable curl",
+    "Machine preacher curl"
+   ],
+   "weekday": 2,
+   "rest": false
+  },
+  {
+   "id": "smvc9m7rqp2guk",
+   "name": "Legs",
+   "exercises": [
+    "Seated leg curl",
+    "Smith machine squat",
+    "Romanian deadlift",
+    "Leg extensions",
+    "Seated hip abduction",
+    "Standing calf raise"
+   ],
+   "weekday": 3,
+   "rest": false
+  },
+  {
+   "id": "smvc9me59rsru5",
+   "name": "Upper",
+   "exercises": [
+    "Incline barbell bench press",
+    "Seated cable fly",
+    "Weighted pull-up",
+    "High cable lateral raise",
+    "Deficit Pendlay row",
+    "Overhead cable triceps extension",
+    "Beijing cable curl"
+   ],
+   "weekday": 5,
+   "rest": false
+  },
+  {
+   "id": "smvc9mjra1bsbe",
+   "name": "Lower",
+   "exercises": [
+    "Lying leg curl",
+    "Pendulum squat",
+    "Romanian deadlift",
+    "Reclined leg extensions",
+    "Bridged hip abduction",
+    "Standing calf raise"
+   ],
+   "weekday": 6,
+   "rest": false
+  }
+ ]
+}
