@@ -42,6 +42,7 @@
           <span class="lbl" id="dayLabel">Workout day</span>
           <div class="chips" id="dayChips"></div>
           <div class="chips" id="dayEx"></div>
+          <p class="hint cue" id="cueHint" hidden></p>
         </div>
         <div class="field">
           <label for="exercise">Exercise</label>
@@ -108,6 +109,7 @@
           <div class="chips" id="cdType" role="group" aria-label="Cardio type">
             <button type="button" class="chip" data-cdt="walk" aria-pressed="true">Walk</button>
             <button type="button" class="chip" data-cdt="run" aria-pressed="false">Run</button>
+            <button type="button" class="chip" data-cdt="stairmaster" aria-pressed="false">Stairs</button>
             <button type="button" class="chip" data-cdt="cycle" aria-pressed="false">Cycle</button>
             <button type="button" class="chip" data-cdt="other" aria-pressed="false">Other</button>
           </div>
@@ -135,6 +137,16 @@
           <div class="field">
             <label for="cdDate">Date</label>
             <input type="date" id="cdDate">
+          </div>
+        </div>
+        <div class="field">
+          <label for="cdInc">Treadmill incline <span class="u">%, 0–15, optional</span></label>
+          <input type="number" id="cdInc" inputmode="decimal" step="0.5" min="0" max="15" placeholder="2–5">
+          <div class="chips" aria-label="Incline presets">
+            <button type="button" class="chip" data-cdi="2">2%</button>
+            <button type="button" class="chip" data-cdi="3">3%</button>
+            <button type="button" class="chip" data-cdi="4">4%</button>
+            <button type="button" class="chip" data-cdi="5">5%</button>
           </div>
         </div>
         <button type="button" class="btn" data-act="addCd">Save cardio</button>
@@ -170,6 +182,7 @@
       <div class="phead"><h2 id="h-week">Last 7 days</h2></div><div id="weekBody"></div>
       <div class="phead" style="margin-top:18px"><h2>Bodyweight</h2></div>
       <div class="bwrow"><input type="number" id="bwIn" inputmode="decimal" step="any"><button type="button" class="btn small" data-act="addBw">+ Log weight</button></div><div id="bwBody"></div>
+      <div class="phead" style="margin-top:18px"><h2>Weekly loss rate</h2></div><div id="lossBody"></div>
       <div class="phead" style="margin-top:18px"><h2>Sleep</h2></div>
       <div class="bwrow"><input type="number" id="slIn" inputmode="decimal" step="0.25"><button type="button" class="btn small" data-act="addSl">Save</button></div><div id="slBody"></div>
     </section>
@@ -181,6 +194,15 @@
       </div>
       <div id="hist"></div>
       <div class="acct" id="acct"></div>
+      <div class="field settings">
+        <span class="lbl">Estimated 1RM formula</span>
+        <div class="seg" id="rmSeg" role="group" aria-label="Estimated 1RM formula">
+          <button type="button" data-rm="epley" aria-pressed="true">Epley</button>
+          <button type="button" data-rm="brzycki" aria-pressed="false">Brzycki</button>
+        </div>
+        <label for="lossRate">Target weight loss <span class="u">% per week, 0.5–1.0</span></label>
+        <input type="number" id="lossRate" inputmode="decimal" step="0.05" min="0.5" max="1" value="0.75">
+      </div>
       <div class="backup">
         <button type="button" class="btn small" data-act="export">Export backup</button>
         <button type="button" class="btn small" data-act="import">Import backup</button>

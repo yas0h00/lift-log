@@ -33,7 +33,9 @@ function fmtDate(s,short){
   return dt.toLocaleDateString(undefined,o);
 }
 function fmtDay(n){return new Date(n*864e5).toLocaleDateString(undefined,{day:'numeric',month:'short',timeZone:'UTC'})}
-function e1rm(kg,reps,rpe){if(rpe>=6&&rpe<=10)reps+=10-rpe;return reps<=1?kg:kg*(1+Math.min(reps,12)/30)}
+var PROFILE={oneRm:'epley',lossRate:0.75};
+/* Epley: w x (1 + r/30). Brzycki: w x 36 / (37 - r). Reps are capped at 12 and RPE adds reps in reserve. */
+function e1rm(kg,reps,rpe){if(rpe>=6&&rpe<=10)reps+=10-rpe;if(reps<=1)return kg;reps=Math.min(reps,12);return PROFILE.oneRm==='brzycki'?kg*36/(37-reps):kg*(1+reps/30)}
 function isBarbell(name){return /squat|bench|deadlift|press|row|clean|snatch|thruster|hip thrust/i.test(name)&&!/dumbbell|\bdb\b|machine|cable|leg press|seated|pendulum/i.test(name)}
 function niceTicks(lo,hi,n){
   if(hi-lo<1e-9){var p=Math.max(1,Math.abs(hi)*0.1);lo-=p;hi+=p}
@@ -62,7 +64,7 @@ store.del=async function(id){
   S.sets=S.sets.filter(function(x){return x.id!==id});lsSave();renderAll();
 };
 function savePrefs(){
-  var p={unit:S.unit,bar:S.bar};
+  var p={unit:S.unit,bar:S.bar,oneRm:PROFILE.oneRm,lossRate:PROFILE.lossRate};
   store.chain=store.chain.then(function(){
     if(S.mode==='db'&&store.prefsRef)return store.prefsRef.set(p);
     try{localStorage.setItem(LS_PREFS,JSON.stringify(p))}catch(e){}
@@ -72,6 +74,8 @@ function applyPrefs(p){
   if(!p)return;
   if(p.unit==='kg'||p.unit==='lb')S.unit=p.unit;
   if(BARS[S.unit].indexOf(p.bar)>=0)S.bar=p.bar;else S.bar=BARS[S.unit][0];
+  if(p.oneRm==='epley'||p.oneRm==='brzycki')PROFILE.oneRm=p.oneRm;
+  if(p.lossRate>=0.5&&p.lossRate<=1)PROFILE.lossRate=p.lossRate;
 }
 function saveErr(e){
   var c=e&&e.code;
@@ -82,7 +86,7 @@ function saveErr(e){
 function fallbackLocal(){
   S.mode='local';S.sets=lsLoad().filter(validSet);S.ready=true;S.split=validDays(lsSplitLoad());
   try{applyPrefs(JSON.parse(localStorage.getItem(LS_PREFS)||'null'))}catch(e){}
-  seedSplit2();
+  seedSplit2();migrateLegNames();
   renderAll();renderSplit();
 }
 
@@ -478,14 +482,65 @@ try{renderEq()}catch(e){}
 
 /* ---------- split ---------- */
 var WD=[[1,'Mon'],[2,'Tue'],[3,'Wed'],[4,'Thu'],[5,'Fri'],[6,'Sat'],[0,'Sun']];
+var NIP=(function(){
+  function X(n,s,sm,a,b,c){return {n:n,t:{sets:s,setsMax:sm,min:a,max:b,cues:c}}}
+  var raw=[
+   ['Upper',1,[
+    X('Incline barbell bench press',3,0,6,8,['45° incline','Slightly narrower grip','Pause at chest']),
+    X('Seated cable fly',3,0,10,12,['Deep stretch','Elbows up ("hugging a big tree")','Wide arc']),
+    X('Weighted pull-up',3,0,6,8,['Vertical torso','Drive elbows down and in','Chest to bar','Straps allowed']),
+    X('High cable lateral raise',2,3,8,10,['Pulley set high for stretch tension','Sweep outward']),
+    X('Deficit Pendlay row',3,0,8,10,['Bumper plate deficit','Torso parallel','2–3 s negative','Final set: lengthened partials']),
+    X('Overhead cable triceps extension',3,0,10,12,['Step forward from the high pulley','Load the long head in a stretch']),
+    X('Beijing cable curl',3,0,8,10,['Step forward from the cable to load the biceps stretched'])]],
+   ['Lower',2,[
+    X('Lying leg curl',3,0,10,12,['Do first as a knee warm-up','Hips flat','Final set: lengthened partials']),
+    X('Pendulum squat',3,4,6,8,['Deep depth for quad and glute stretch','Last set to failure']),
+    X('Romanian deadlift',3,0,8,10,['Hip hinge','Neutral spine','Stop below the knees','Use straps']),
+    X('Reclined leg extensions',1,2,10,12,['Recline the seat back for rectus femoris stretch','3 s eccentric']),
+    X('Bridged hip abduction',2,3,12,15,['Extended hips to align with upper glute medius']),
+    X('Standing calf raise',3,4,8,10,['Full stretch at the bottom','Final set: hold a 30 s loaded stretch'])]],
+   ['Rest',3,'rest','15–20 min treadmill walk at 2–5% incline · 8,000–10,000 steps.'],
+   ['Push',4,[
+    X('Incline barbell bench press',3,0,6,8,['Controlled descent','Chest pause']),
+    X('Machine shoulder press',3,0,8,10,['Push delts to failure, safely']),
+    X('Pec deck',3,0,10,12,['Final set: 4–5 lengthened partials']),
+    X('High cable lateral raise',3,0,10,12,['Push the weight outward across the body']),
+    X('Overhead cable triceps extension',3,0,10,12,['Stretched long-head focus']),
+    X('Cable triceps pushdown',2,3,12,15,['Lighter weight for peak contraction'])]],
+   ['Pull',5,[
+    X('Close-grip lat pulldown',3,0,6,8,['Drive elbows down and in toward the hips']),
+    X('Chest-supported machine row',3,0,8,10,['Flared elbows for mid-traps and rhomboids']),
+    X('Horizontal close-grip cable row',3,0,8,10,['Final set: lengthened partials']),
+    X('Reverse cable fly',3,0,12,15,['Light weight to isolate rear delts','Keep the upper traps out of it']),
+    X('Trapezius shrugs',2,3,10,12,['Shrug up and inward toward the ears']),
+    X('Beijing cable curl',3,0,8,10,['Load the biceps in the lengthened position']),
+    X('Machine preacher curl',2,3,10,12,['Short-range elbow flexion focus'])]],
+   ['Legs',6,[
+    X('Seated leg curl',3,0,10,12,['Warm up the knees','About 1.5× hamstring growth bias over lying']),
+    X('Smith machine squat',3,4,6,8,['Maximum knee flexion','Final set to failure']),
+    X('Romanian deadlift',3,0,8,10,['Hinge hips straight back','Neutral spine']),
+    X('Reclined leg extensions',3,0,10,12,['Recline the seat back','3 s negative']),
+    X('Bridged hip abduction',2,3,12,15,['Bridged hips for glute medius']),
+    X('Standing calf raise',3,4,8,10,['Final set: hold a 30 s loaded stretch'])]],
+   ['Rest',0,'rest','Complete recovery.']
+  ];
+  return raw.map(function(r){var o={name:r[0],wd:r[1],exercises:[],targets:{}};
+    if(r[2]==='rest'){o.rest=1;o.note=r[3];return o}
+    r[2].forEach(function(x){o.exercises.push(x.n);o.targets[x.n.toLowerCase()]=x.t});return o});
+})();
+function cleanTargets(t){var o={};if(!t||typeof t!=='object')return o;Object.keys(t).slice(0,40).forEach(function(k){var x=t[k];if(x&&x.sets>=1&&x.sets<=20&&x.min>=1&&x.max>=x.min&&x.max<=100)o[k.toLowerCase()]={sets:x.sets,setsMax:x.setsMax>x.sets?x.setsMax:0,min:x.min,max:x.max,cues:Array.isArray(x.cues)?x.cues.filter(function(c){return typeof c==='string'&&c}).slice(0,8).map(function(c){return c.slice(0,100)}):[]}});return o}
+/* target for an exercise on a day: the day's own targets first, then the Nippard template day with the same name */
+function targetFor(d,name){var k=String(name).toLowerCase().replace(/ · single$/,'');if(d.targets&&d.targets[k])return d.targets[k];
+  var t=NIP.find(function(x){return !x.rest&&x.name.toLowerCase()===String(d.name).toLowerCase()});return t&&t.targets[k]||null}
+function tgtShort(t){return t.sets+(t.setsMax?'–'+t.setsMax:'')+'×'+t.min+'–'+t.max}
+function tgChip(d,n){var t=targetFor(d,n);return t?'<span class="tg">'+tgtShort(t)+'</span>':''}
+function restNote(d){var n=d.note;if(!n){var t=NIP.find(function(x){return x.rest&&x.wd===d.weekday});n=t?t.note:''}return n?n+' ':''}
+function showCue(name){var el=$('#cueHint');if(!el)return;var d=S.split.find(function(x){return x.id===S.day}),t=(d&&name)?targetFor(d,name):null;
+  if(!t){el.hidden=true;el.innerHTML='';return}
+  el.hidden=false;el.innerHTML='<b>Target '+tgtShort(t).replace('×',' × ')+' reps</b>'+(t.cues.length?'<br>'+t.cues.map(esc).join(' · '):'')}
 var TPL={
-  nip:[{name:'Upper',wd:1,exercises:['Incline barbell bench press','Seated cable fly','Weighted pull-up','High cable lateral raise','Deficit Pendlay row','Overhead cable triceps extension','Beijing cable curl']},
-       {name:'Lower',wd:2,exercises:['Lying leg curl','Pendulum squat','Romanian deadlift','Reclined leg extensions','Bridged hip abduction','Standing calf raise']},
-       {name:'Rest',wd:3,rest:1,exercises:[]},
-       {name:'Push',wd:4,exercises:['Incline barbell bench press','Machine shoulder press','Pec deck','High cable lateral raise','Overhead cable triceps extension','Cable triceps pushdown']},
-       {name:'Pull',wd:5,exercises:['Close-grip lat pulldown','Chest-supported machine row','Horizontal close-grip cable row','Reverse cable fly','Trapezius shrugs','Beijing cable curl','Machine preacher curl']},
-       {name:'Legs',wd:6,exercises:['Seated leg curl','Smith machine squat','Romanian deadlift','Reclined leg extensions','Bridged hip abduction','Standing calf raise']},
-       {name:'Rest',wd:0,rest:1,exercises:[]}],
+  nip:NIP,
   ppl:[{name:'Push',exercises:['Bench press','Overhead press','Incline bench press','Triceps pushdown','Lateral raise']},
        {name:'Pull',exercises:['Deadlift','Barbell row','Pull-up','Face pull','Dumbbell curl']},
        {name:'Legs',exercises:['Back squat','Romanian deadlift','Leg press','Leg curl','Calf raise']}],
@@ -499,7 +554,7 @@ function validDays(a){
   if(!Array.isArray(a))return [];
   return a.filter(function(d){return d&&typeof d.id==='string'&&typeof d.name==='string'&&Array.isArray(d.exercises)}).map(function(d){
     var wd=Number(d.weekday);
-    return {id:d.id,name:d.name,exercises:d.exercises.filter(function(x){return typeof x==='string'&&x}),weekday:(wd>=0&&wd<=6)?wd:-1,rest:!!d.rest};
+    return {id:d.id,name:d.name,exercises:d.exercises.filter(function(x){return typeof x==='string'&&x}),weekday:(wd>=0&&wd<=6)?wd:-1,rest:!!d.rest,targets:cleanTargets(d.targets),note:typeof d.note==='string'?d.note.slice(0,160):''};
   });
 }
 function saveSplit(){
@@ -587,8 +642,8 @@ function renderDayPicker(){
   var mh=(sg&&sg.miss&&S.day===sg.id)?'<p class="hint" style="width:100%">You missed '+esc(sg.miss.d.name)+' '+(sg.miss.k===1?'yesterday':'on '+esc(sg.miss.wk))+'. Do it today'+(sg.alt?' (your '+esc(S.split.find(function(x){return x.id===sg.alt.id}).name)+' day is still one tap away)':'')+', or <button type="button" class="linkbtn" data-skipmiss="'+esc(sg.miss.date+'|'+sg.miss.d.id)+'">skip it</button>.</p>':'';
   exs.innerHTML=mh+(day.exercises.length?day.exercises.map(function(n){
     var c=cnt[n.toLowerCase()]||0;
-    return '<button type="button" class="chip" data-pick="'+esc(n)+'">'+esc(n)+(c?'<span class="cnt" aria-label="'+c+' sets today">'+c+'</span>':'')+'</button>';
-  }).join(''):(day.rest?'<p class="hint" style="width:100%">Rest day. Your streak stays alive. Pick another day above if you train anyway.</p>':'<p class="hint">No exercises in '+esc(day.name)+' yet. Add them in Workout split.</p>'));
+    return '<button type="button" class="chip" data-pick="'+esc(n)+'">'+esc(n)+tgChip(day,n)+(c?'<span class="cnt" aria-label="'+c+' sets today">'+c+'</span>':'')+'</button>';
+  }).join(''):(day.rest?'<p class="hint" style="width:100%">Rest day. '+esc(restNote(day))+'Your streak stays alive. Pick another day above if you train anyway.</p>':'<p class="hint">No exercises in '+esc(day.name)+' yet. Add them in Workout split.</p>'));
 }
 document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-skipmiss]');if(!b)return;
   var p=b.dataset.skipmiss.split('|'),o=jget('liftlog.skipmiss',{});o[p[0]]=p[1];jset('liftlog.skipmiss',o);S.day=null;renderDayPicker();toast('Skipped. Back to your normal schedule.')});
@@ -607,7 +662,7 @@ function autoFill(){var n=norm($('#exercise').value);if(n&&S.pf!==n.toLowerCase(
 function pickExercise(name){
   $('#exercise').value=name;
   if(!prefill(name)){S.side='both';S.eq=guessEq(name)||'bb';$('#weight').value='';$('#reps').value='';renderEq()}
-  formErr('');updatePreview();
+  formErr('');updatePreview();showCue(name);
 }
 function renderSplit(){
   var b=$('#splitBody');
@@ -655,7 +710,7 @@ function moveDay(id,dir){
 }
 function applyTpl(k){
   if(S.split.length&&!confirm('Replace your current split with this template? Your logged sets are not affected.'))return;
-  S.split=TPL[k].map(function(t){return {id:newId(),name:t.name,exercises:t.exercises.slice(),weekday:t.wd==null?-1:t.wd,rest:!!t.rest}});
+  S.split=TPL[k].map(function(t){return {id:newId(),name:t.name,exercises:t.exercises.slice(),weekday:t.wd==null?-1:t.wd,rest:!!t.rest,targets:cleanTargets(t.targets),note:t.note||''}});
   S.day=null;saveSplit();renderSplit();renderDayPicker();
   toast('Split added. Set weekdays if you train on fixed days.');
 }
@@ -669,7 +724,9 @@ function downloadText(text,name){
   toast('Backup downloaded.');
 }
 function exportData(){
-  var out={app:'lift-log',version:1,exportedAt:new Date().toISOString(),unit:S.unit,sets:S.sets,split:S.split,bw:BW||bwLoad(),sl:SL||slLoad(),cd:CD||cdLoad()};
+  var L=window.LLDiet?window.LLDiet.get():{diet:{},steps:{}},bwl=BW||bwLoad();
+  /* version 1.2 adds userProfile, diet and steps; older keys keep their names so old backups and old readers still work */
+  var out={app:'lift-log',version:'1.2',exportedAt:new Date().toISOString(),unit:S.unit,userProfile:{weightKg:bwl.length?bwl[bwl.length-1].kg:null,targetWeightLossRatePercent:PROFILE.lossRate,oneRmFormula:PROFILE.oneRm},sets:S.sets,split:S.split,bw:bwl,sl:SL||slLoad(),cd:CD||cdLoad(),diet:L.diet,steps:L.steps};
   try{localStorage.setItem(LS_BK,String(Date.now()))}catch(e){}
   var text=JSON.stringify(out,null,1), name='lift-log-'+todayStr()+'.json', file=null;
   try{file=new File([text],name,{type:'application/json'})}catch(e){}
@@ -693,16 +750,17 @@ function importData(file){
 function impAsk(o,add,dup,bad){
   var el=$('#impBar');if(!el){el=document.createElement('div');el.id='impBar';document.body.appendChild(el)}
   BW=BW||bwLoad();SL=SL||slLoad();CD=CD||cdLoad();
-  var hb={},hs={},hc={},nb=0,ns=0,nc=0,rx=/^\d{4}-\d{2}-\d{2}$/;
+  var hb={},hs={},hc={},nb=0,ns=0,nc=0,nd=0,nst=0,rx=/^\d{4}-\d{2}-\d{2}$/;
   BW.forEach(function(x){hb[x.date]=1});SL.forEach(function(x){hs[x.date]=1});CD.forEach(function(x){hc[x.id]=1});
   (o.bw||[]).forEach(function(x){if(x&&x.kg>0&&rx.test(x.date)&&!hb[x.date])nb++});
   (o.sl||[]).forEach(function(x){if(x&&x.h>0&&rx.test(x.date)&&!hs[x.date])ns++});
   (o.cd||[]).forEach(function(x){if(cdOk(x)&&!hc[x.id])nc++});
-  if(!add.length&&!nb&&!ns&&!nc){el.hidden=true;toast('Nothing new to import. All '+o.sets.length+' sets are already here'+(bad?' ('+bad+' invalid skipped).':'.'));return}
+  if(window.LLDiet){var q=window.LLDiet.countNew(o);nd=q.d;nst=q.s}
+  if(!add.length&&!nb&&!ns&&!nc&&!nd&&!nst){el.hidden=true;toast('Nothing new to import. All '+o.sets.length+' sets are already here'+(bad?' ('+bad+' invalid skipped).':'.'));return}
   var ds=add.map(function(x){return x.date}).sort(), rng=ds.length?(ds[0]===ds[ds.length-1]?fmtDate(ds[0],1):fmtDate(ds[0],1)+' to '+fmtDate(ds[ds.length-1],1)):'';
   function row(l,n,c){return '<li class="'+(c||'')+'"><span>'+l+'</span><b>'+n+'</b></li>'}
   el.className='impm';el.hidden=false;el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label','Import check');
-  el.innerHTML='<div class="box"><h3>Check before importing</h3><ul>'+row('Sets in file',o.sets.length)+row('New sets',add.length,add.length?'ok':'')+row('Duplicates (skipped)',dup,dup?'warn':'')+row('Corrupted (ignored)',bad,bad?'bad':'')+(nb?row('New bodyweight entries',nb):'')+(ns?row('New sleep nights',ns):'')+(nc?row('New cardio sessions',nc):'')+'</ul>'+(rng?'<p class="hint">New sets cover '+esc(rng)+'.</p>':'')+'<p class="hint">Nothing is overwritten. Your current log stays as it is.</p><div class="chips"><button type="button" class="btn small primary" id="impGo">Import '+add.length+(add.length===1?' set':' sets')+'</button><button type="button" class="btn small" id="impNo">Cancel</button></div></div>';
+  el.innerHTML='<div class="box"><h3>Check before importing</h3><ul>'+row('Sets in file',o.sets.length)+row('New sets',add.length,add.length?'ok':'')+row('Duplicates (skipped)',dup,dup?'warn':'')+row('Corrupted (ignored)',bad,bad?'bad':'')+(nb?row('New bodyweight entries',nb):'')+(ns?row('New sleep nights',ns):'')+(nc?row('New cardio sessions',nc):'')+(nd?row('New food entries',nd):'')+(nst?row('New step days',nst):'')+'</ul>'+(rng?'<p class="hint">New sets cover '+esc(rng)+'.</p>':'')+'<p class="hint">Nothing is overwritten. Your current log stays as it is.</p><div class="chips"><button type="button" class="btn small primary" id="impGo">'+(add.length?'Import '+add.length+(add.length===1?' set':' sets'):'Import')+'</button><button type="button" class="btn small" id="impNo">Cancel</button></div></div>';
   function close(){el.hidden=true;document.removeEventListener('keydown',esc2)}
   function esc2(e){if(e.key==='Escape'){close();toast('Import cancelled. Nothing was changed.')}}
   document.addEventListener('keydown',esc2);
@@ -715,7 +773,7 @@ function applyImport(o,add){
       S.sets=S.sets.concat(add);lsSave();
       if(Array.isArray(o.bw)){BW=BW||bwLoad();var hd={};BW.forEach(function(x){hd[x.date]=1});o.bw.forEach(function(x){if(x&&x.kg>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&!hd[x.date])BW.push({date:x.date,kg:x.kg})});BW.sort(function(a,b){return a.date<b.date?-1:1});bwSave()}
       if(Array.isArray(o.sl)){SL=SL||slLoad();var hs={};SL.forEach(function(x){hs[x.date]=1});o.sl.forEach(function(x){if(x&&x.h>0&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)&&!hs[x.date])SL.push({date:x.date,h:x.h})});SL.sort(function(a,b){return a.date<b.date?-1:1});slSave()}
-      importCd(o.cd);if(!S.split.length&&Array.isArray(o.split)){S.split=validDays(o.split);saveSplit();renderSplit()}
+      importCd(o.cd);if(window.LLDiet)window.LLDiet.merge(o);if(!S.split.length&&Array.isArray(o.split)){S.split=validDays(o.split);saveSplit();renderSplit()}
       renderAll();
       toast('Imported '+add.length+(add.length===1?' set.':' sets.'));
     }catch(e){toast('Import failed. Check the file and try again.')}
@@ -819,7 +877,10 @@ function renderSleep(){
 var SBC=(function(){try{return JSON.parse(localStorage.getItem('liftlog.sbcfg'))||{}}catch(e){return{}}})();
 var SB_URL=SBC.url||'https://ffrtxazwhurvbyiuztmr.supabase.co', SB_KEY=SBC.key||'sb_publishable_LEhlt9m1WKg8qSL7RGhXOQ_MloskutF';
 var sb=null, SU=null, syncing=false, syncMsg='Not synced yet', syncT=null;
-var K_SYN='liftlog.synced', K_PD='liftlog.pendingdel', K_SPD='liftlog.splitdirty';
+var K_SYN='liftlog.synced', K_PD='liftlog.pendingdel', K_SPD='liftlog.splitdirty', K_ADT='liftlog.adts';
+function touchAD(){jset(K_ADT,Date.now());if(sb&&SU&&!syncing)schedSync()}
+window.LLSync={touch:touchAD};
+function adProfile(p){if(!p)return;if(p.oneRm==='epley'||p.oneRm==='brzycki')PROFILE.oneRm=p.oneRm;if(p.lossRate>=0.5&&p.lossRate<=1)PROFILE.lossRate=p.lossRate;savePrefs()}
 function jget(k,d){try{var v=JSON.parse(localStorage.getItem(k));return v==null?d:v}catch(e){return d}}
 function jset(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 var rawSaveSplit=saveSplit;
@@ -848,6 +909,7 @@ async function syncNow(){
     var keep=S.sets.filter(function(x){return rids[x.id]||!syn[x.id]});
     keep.forEach(function(x){have[x.id]=1});
     var add=rem.filter(function(x){return !have[x.id]}).map(fromRow).filter(validSet);
+    add.forEach(function(s){if(s.date<='2026-10-24'){var r=legName(s.exercise);if(r)s.exercise=r}});
     var hasX=rem.length?('eq' in rem[0]):true,rmap={};rem.forEach(function(x){rmap[x.id]=x});sbNoX=!hasX;
     var up=keep.filter(function(x){return !rids[x.id]||(hasX&&(x.eq||x.sd||x.add||x.bw)&&rmap[x.id].eq==null&&rmap[x.id].sd==null)}).map(toRow);
     for(var i=0;i<up.length;i+=500){var part=up.slice(i,i+500),rr=await sb.from('sets').upsert(sbNoX?part.map(stripX):part);
@@ -865,6 +927,18 @@ async function syncNow(){
       rl.forEach(function(x){if(!hl[x.date])SL.push({date:x.date,h:Number(x.hours)})});
       SL.sort(function(a,b){return a.date<b.date?-1:1});slSave();
       if(SL.length)chk(await sb.from('sleep').upsert(SL.map(function(x){return {user_id:SU.id,date:x.date,hours:x.h}})));
+    }catch(e){}
+    try{
+      var L=window.LLDiet,ra=chk(await sb.from('app_data').select('data').limit(1)),rd=(ra.length&&ra[0].data)||{},ts=jget(K_ADT,0),ru=Number(rd.updatedAt)||0;
+      CD=CD||cdLoad();
+      if(ru>ts&&ts>0){
+        CD=(Array.isArray(rd.cardio)?rd.cardio:[]).filter(cdOk);try{localStorage.setItem(LS_CD,JSON.stringify(CD))}catch(e){}
+        if(L)L.replace(rd);adProfile(rd.profile);jset(K_ADT,ru);renderCd();
+      }else if(ts>ru||!ts||!ra.length){
+        if(!ts){var hc={};CD.forEach(function(x){hc[x.id]=1});(rd.cardio||[]).forEach(function(x){if(cdOk(x)&&!hc[x.id]){hc[x.id]=1;CD.push(x)}});cdSave();if(L)L.merge(rd);if(!ru)adProfile(null);else adProfile(rd.profile)}
+        var t2=jget(K_ADT,0)||Date.now();jset(K_ADT,t2);var dd=L?L.get():{diet:{},steps:{}};
+        chk(await sb.from('app_data').upsert({user_id:SU.id,data:{version:'1.2',updatedAt:t2,profile:{oneRm:PROFILE.oneRm,lossRate:PROFILE.lossRate},cardio:CD,diet:dd.diet,steps:dd.steps}}));renderCd();
+      }
     }catch(e){}
     var rs=chk(await sb.from('split').select('data').limit(1));
     if(!rs.length||jget(K_SPD,0)){if(S.split.length||!rs.length){chk(await sb.from('split').upsert({user_id:SU.id,data:S.split}));jset(K_SPD,0)}}
@@ -899,7 +973,10 @@ var SB_SQL=['create table if not exists sets(id text primary key,user_id uuid no
 'drop policy if exists "own rows" on sets;create policy "own rows" on sets for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
 'drop policy if exists "own rows" on bodyweight;create policy "own rows" on bodyweight for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
 'drop policy if exists "own rows" on sleep;create policy "own rows" on sleep for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
-'drop policy if exists "own rows" on split;create policy "own rows" on split for all using(user_id=auth.uid()) with check(user_id=auth.uid());'].join('\n');
+'drop policy if exists "own rows" on split;create policy "own rows" on split for all using(user_id=auth.uid()) with check(user_id=auth.uid());',
+'create table if not exists app_data(user_id uuid primary key default auth.uid() references auth.users on delete cascade,data jsonb);',
+'alter table app_data enable row level security;',
+'drop policy if exists "own rows" on app_data;create policy "own rows" on app_data for all using(user_id=auth.uid()) with check(user_id=auth.uid());'].join('\n');
 var _renderAcct=renderAcct;
 renderAcct=function(){_renderAcct();var el=$('#acct');if(!el)return;
   el.insertAdjacentHTML('beforeend','<details class="sbset"><summary>Cloud sync setup</summary><p class="hint">Use your own Supabase project. Run the SQL once in its SQL editor, then paste the project URL and publishable key here.</p><input type="url" id="sbUrl" placeholder="https://your-project.supabase.co" value="'+esc(SBC.url||'')+'"><input type="text" id="sbKey" placeholder="Publishable key (sb_publishable_…)" value="'+esc(SBC.key||'')+'" autocomplete="off"><div class="chips"><button type="button" class="chip" data-sb="save">Save and reload</button><button type="button" class="chip" data-sb="sql">Copy SQL</button>'+(SBC.url?'<button type="button" class="chip" data-sb="reset">Use default</button>':'')+'</div><p class="hint">'+(SBC.url?'Using your project.':'Using the built-in project.')+'</p></details>')};
@@ -981,7 +1058,7 @@ document.addEventListener('change',function(e){
 $('#logForm').addEventListener('submit',submitSet);
 $('#importFile').addEventListener('change',function(e){var f=e.target.files&&e.target.files[0];if(f)importData(f);e.target.value=''});
 ['#exercise','#weight','#reps','#date'].forEach(function(s){$(s).addEventListener('input',function(){formErr('');updatePreview()})});
-$('#exercise').addEventListener('change',function(){$('#isBar').checked=isBarbell($('#exercise').value);autoFill();updatePreview()});
+$('#exercise').addEventListener('change',function(){$('#isBar').checked=isBarbell($('#exercise').value);autoFill();updatePreview();showCue($('#exercise').value)});
 $('#exercise').addEventListener('input',function(e){if(!e.inputType||e.inputType==='insertReplacementText')autoFill()});
 $('#isBar').addEventListener('change',updatePlates);$('#rpe').addEventListener('change',updatePreview);
 $('#barSel').addEventListener('change',function(){S.bar=parseFloat($('#barSel').value);savePrefs();updatePlates()});
@@ -1111,17 +1188,18 @@ function renderInsights(){
 }
 
 /* ---------- cardio ---------- */
-var CD=null,LS_CD='liftlog.cardio.v1',cdT='walk',CDN={walk:'walk',run:'run',cycle:'cycle',other:'do cardio'};
+var CD=null,LS_CD='liftlog.cardio.v1',cdT='walk',CDN={walk:'walk',run:'run',cycle:'cycle',stairmaster:'use the stairmaster',other:'do cardio'};
 function cdOk(x){return x&&typeof x.id==='string'&&x.min>0&&x.min<=600&&CDN[x.type]&&/^\d{4}-\d{2}-\d{2}$/.test(x.date)}
 function cdLoad(){try{var a=JSON.parse(localStorage.getItem(LS_CD)||'[]');return Array.isArray(a)?a.filter(cdOk):[]}catch(e){return[]}}
-function cdSave(){try{localStorage.setItem(LS_CD,JSON.stringify(CD))}catch(e){toast('Could not save cardio on this device. Export a backup.')}}
-function importCd(a){if(!Array.isArray(a))return;CD=CD||cdLoad();var h={};CD.forEach(function(x){h[x.id]=1});a.forEach(function(x){if(cdOk(x)&&!h[x.id]){h[x.id]=1;CD.push({id:x.id,type:x.type,min:Math.round(x.min),km:x.km>0&&x.km<=500?x.km:null,date:x.date})}});cdSave()}
+function cdSave(){try{localStorage.setItem(LS_CD,JSON.stringify(CD))}catch(e){toast('Could not save cardio on this device. Export a backup.')}touchAD()}
+function importCd(a){if(!Array.isArray(a))return;CD=CD||cdLoad();var h={};CD.forEach(function(x){h[x.id]=1});a.forEach(function(x){if(cdOk(x)&&!h[x.id]){h[x.id]=1;CD.push({id:x.id,type:x.type,min:Math.round(x.min),km:x.km>0&&x.km<=500?x.km:null,inc:x.inc>=0&&x.inc<=15?x.inc:null,date:x.date})}});cdSave()}
 function addCd(){
   var min=parseInt($('#cdMin').value,10),km=parseFloat($('#cdKm').value),d=$('#cdDate').value||todayStr();
   if(!(min>=1&&min<=600))return toast('Enter minutes between 1 and 600.');
   if($('#cdKm').value&&!(km>0&&km<=500))return toast('Distance should be between 0 and 500 km.');
+  var incV=$('#cdInc')?$('#cdInc').value:'',inc=parseFloat(incV);if(incV&&!(inc>=0&&inc<=15))return toast('Incline should be between 0 and 15%.');
   if(d>todayStr())return toast('That date is in the future.');
-  CD=CD||cdLoad();CD.push({id:newId(),type:cdT,min:min,km:km>0?km:null,date:d});cdSave();
+  CD=CD||cdLoad();CD.push({id:newId(),type:cdT,min:min,km:km>0?km:null,inc:(incV&&inc>=0)?inc:null,date:d});cdSave();
   $('#cdMin').value='';$('#cdKm').value='';renderCd();toast('Cardio saved.');
 }
 function renderCd(){
@@ -1131,13 +1209,14 @@ function renderCd(){
   var a=ymd(addD(new Date(),-6)),w=CD.filter(function(x){return x.date>=a}),mn=0,km=0;
   w.forEach(function(x){mn+=x.min;km+=x.km||0});
   var rec=CD.slice().sort(function(x,y){return x.date<y.date?1:x.date>y.date?-1:0}).slice(0,5);
-  el.innerHTML=CD.length?'<p class="hint">Last 7 days: <b>'+mn+' min</b>'+(km>0?' · <b>'+fmt(km,1)+' km</b>':'')+'</p>'+rec.map(function(x){return '<div class="hol"><span>'+esc(fmtDate(x.date,true))+' · '+x.type+' · '+x.min+' min'+(x.km?' · '+fmt(x.km,1)+' km':'')+'</span><button type="button" class="linkbtn" data-act="delCd" data-id="'+esc(x.id)+'">Delete</button></div>'}).join(''):'<p class="hint">Log a walk, run or ride to track it here.</p>';
+  el.innerHTML=CD.length?'<p class="hint">Last 7 days: <b>'+mn+' min</b>'+(km>0?' · <b>'+fmt(km,1)+' km</b>':'')+'</p>'+rec.map(function(x){return '<div class="hol"><span>'+esc(fmtDate(x.date,true))+' · '+x.type+' · '+x.min+' min'+(x.km?' · '+fmt(x.km,1)+' km':'')+(x.inc!=null?' · '+fmt(x.inc,1)+'% incline':'')+'</span><button type="button" class="linkbtn" data-act="delCd" data-id="'+esc(x.id)+'">Delete</button></div>'}).join(''):'<p class="hint">Log a walk, run or ride to track it here.</p>';
 }
 document.addEventListener('click',function(e){
-  var b=e.target.closest&&e.target.closest('[data-cdt],[data-cdstep],[data-cdq],[data-act="addCd"],[data-act="delCd"],[data-act="delBw"]');if(!b)return;
+  var b=e.target.closest&&e.target.closest('[data-cdt],[data-cdstep],[data-cdq],[data-act="addCd"],[data-act="delCd"],[data-act="delBw"],[data-cdi]');if(!b)return;
   if(b.dataset.cdt){cdT=b.dataset.cdt;renderCd()}
   else if(b.dataset.cdstep){var i=$('#cdMin');i.value=Math.max(1,Math.min(600,(parseInt(i.value,10)||0)+Number(b.dataset.cdstep)))}
   else if(b.dataset.cdq)$('#cdMin').value=b.dataset.cdq;
+  else if(b.dataset.cdi)$('#cdInc').value=b.dataset.cdi;
   else if(b.dataset.act==='addCd')addCd();
   else if(b.dataset.act==='delBw')delBw();
   else if(b.dataset.act==='delCd'){CD=CD||cdLoad();var x=CD.find(function(y){return y.id===b.dataset.id});if(!x)return;CD=CD.filter(function(y){return y.id!==x.id});cdSave();renderCd();toast('Cardio deleted.',{label:'Undo',fn:function(){CD.push(x);cdSave();renderCd()}})}
@@ -1145,11 +1224,57 @@ document.addEventListener('click',function(e){
 ['#bwIn','#slIn'].forEach(function(s){var el=$(s);if(el)el.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();if(s==='#bwIn')addBw();else addSl()}})});
 document.addEventListener('visibilitychange',function(){if(document.hidden)return;var d=todayStr();$('#date').max=d;if($('#date').value>d)$('#date').value=d;renderAll()});
 
+/* ---------- profile: 1RM formula, loss target, weekly loss rate ---------- */
+function renderProfile(){
+  document.querySelectorAll('[data-rm]').forEach(function(b){b.setAttribute('aria-pressed',String(b.dataset.rm===PROFILE.oneRm))});
+  var i=$('#lossRate');if(i&&document.activeElement!==i)i.value=PROFILE.lossRate;
+}
+/* weekly % change in bodyweight (positive = losing): 7-day average vs the week before, else the trend over the last 28 days */
+function lossStat(){
+  BW=BW||bwLoad();var td=dayNum(todayStr()),cur=[],prv=[];
+  BW.forEach(function(x){var g=td-dayNum(x.date);if(g>=0&&g<=6)cur.push(x.kg);else if(g>=7&&g<=13)prv.push(x.kg)});
+  function av(z){return z.reduce(function(s,v){return s+v},0)/z.length}
+  if(cur.length&&prv.length){var p=av(prv),c=av(cur);return {pct:(p-c)/p*100,basis:'your 7-day average vs the week before'}}
+  var pts=BW.filter(function(x){return td-dayNum(x.date)<=28});
+  if(pts.length>=2){var f=pts[0],l=pts[pts.length-1],dd=dayNum(l.date)-dayNum(f.date);if(dd>=5)return {pct:(f.kg-l.kg)/f.kg*100/(dd/7),basis:'your trend since '+fmtDate(f.date,1)}}
+  return null;
+}
+function renderLoss(){
+  var el=$('#lossBody');if(!el)return;var r=lossStat(),bw=BW&&BW.length?BW[BW.length-1].kg:0;
+  if(!r){el.innerHTML='<p class="hint">Log your bodyweight on a few days across two weeks to compare your weekly change with the 0.5–1.0% target.</p>';return}
+  var p=r.pct,st=p<0?'Weight is up '+fmt(-p,2)+'% per week.':p<0.5?'Losing '+fmt(p,2)+'% per week, below the 0.5–1.0% band.':p<=1?'Losing '+fmt(p,2)+'% per week. On target.':'Losing '+fmt(p,2)+'% per week, faster than 1.0%. A little more food helps protect muscle.';
+  el.innerHTML='<p class="hint"><b>'+st+'</b><br>'+(bw?'Your '+fmt(PROFILE.lossRate,2)+'% goal is about '+fmt(toU(bw*PROFILE.lossRate/100),2)+' '+S.unit+' per week. ':'')+'Based on '+r.basis+'.</p>';
+}
+document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('[data-rm]');if(!b)return;
+  PROFILE.oneRm=b.dataset.rm;savePrefs();touchAD();renderAll();toast('Estimated 1RM now uses '+(PROFILE.oneRm==='epley'?'Epley.':'Brzycki.'))});
+document.addEventListener('change',function(e){if(!e.target||e.target.id!=='lossRate')return;
+  var v=parseFloat(e.target.value);if(!isFinite(v))v=0.75;v=Math.round(Math.min(1,Math.max(0.5,v))*20)/20;
+  PROFILE.lossRate=v;e.target.value=v;savePrefs();touchAD();renderLoss()});
+var _renderAll=renderAll;renderAll=function(){_renderAll.apply(this,arguments);try{renderProfile();renderLoss()}catch(e){}};
+
 /* ---------- new split + renamed sets (runs once per device) ---------- */
 var SEED_KEY='liftlog.seed.split2';
 var RENAME={"Bench press":"Incline barbell bench press","Shoulder press":"Machine shoulder press","Cable lateral":"High cable lateral raise","Tricep extensions":"Overhead cable triceps extension","Close grip lat pull down":"Close-grip lat pulldown","Chest support row":"Chest-supported machine row","Close grip cable row":"Horizontal close-grip cable row","Reverse fly":"Reverse cable fly","Shrugs":"Trapezius shrugs","Preacher curl":"Machine preacher curl","Leg curl":"Lying leg curl","Squat":"Pendulum squat","Leg extensions":"Reclined leg extensions","Glute":"Bridged hip abduction","Calf raise":"Standing calf raise"};
 var SEED_SPLIT=[{"id":"smvf5xp9xmlm0c","name":"Push","exercises":["Incline barbell bench press","Machine shoulder press","Pec deck","High cable lateral raise","Overhead cable triceps extension","Cable triceps pushdown"],"weekday":1,"rest":false},{"id":"smvc9m7rqyjmby","name":"Pull","exercises":["Close-grip lat pulldown","Chest-supported machine row","Horizontal close-grip cable row","Reverse cable fly","Trapezius shrugs","Beijing cable curl","Machine preacher curl"],"weekday":2,"rest":false},{"id":"smvc9m7rqp2guk","name":"Legs","exercises":["Seated leg curl","Smith machine squat","Romanian deadlift","Leg extensions","Seated hip abduction","Standing calf raise"],"weekday":3,"rest":false},{"id":"smvc9me59rsru5","name":"Upper","exercises":["Incline barbell bench press","Seated cable fly","Weighted pull-up","High cable lateral raise","Deficit Pendlay row","Overhead cable triceps extension","Beijing cable curl"],"weekday":5,"rest":false},{"id":"smvc9mjra1bsbe","name":"Lower","exercises":["Lying leg curl","Pendulum squat","Romanian deadlift","Reclined leg extensions","Bridged hip abduction","Standing calf raise"],"weekday":6,"rest":false}];
 var SEED_SETS=[{"id":"smvcbyr7uv1si7","exercise":"Lying leg curl","kg":65,"reps":15,"date":"2026-10-17","ts":1792237553993},{"id":"smvcbz9fa1ae3p","exercise":"Lying leg curl","kg":70,"reps":10,"date":"2026-10-17","ts":1792237577589},{"id":"smvcc0u54n0itx","exercise":"Lying leg curl","kg":75,"reps":5,"date":"2026-10-17","ts":1792237651096},{"id":"smvcdlorr61ayz","exercise":"Pendulum squat","kg":20,"reps":8,"date":"2026-10-17","ts":1792240303526,"wu":true},{"id":"smvcdmvrwcx8k0","exercise":"Pendulum squat","kg":80,"reps":8,"date":"2026-10-17","ts":1792240359260},{"id":"smvcdn9kr43mnt","exercise":"Pendulum squat","kg":120,"reps":8,"date":"2026-10-17","ts":1792240377147},{"id":"smvcdo30v5rb9j","exercise":"Pendulum squat","kg":150,"reps":6,"date":"2026-10-17","ts":1792240415311},{"id":"smvcdoc7h4hhzi","exercise":"Pendulum squat","kg":170,"reps":4,"date":"2026-10-17","ts":1792240427212},{"id":"smvcekypbn9zi5","exercise":"Reclined leg extensions","kg":70,"reps":24,"date":"2026-10-17","ts":1792241949358},{"id":"smvcel9m38cmb5","exercise":"Reclined leg extensions","kg":75,"reps":15,"date":"2026-10-17","ts":1792241963499},{"id":"smvcge9xxhlf21","exercise":"Reclined leg extensions","kg":75,"reps":24,"date":"2026-10-17","ts":1792244996565},{"id":"smvcgecyb1kntg","exercise":"Reclined leg extensions","kg":75,"reps":24,"date":"2026-10-17","ts":1792245000467},{"id":"smvcgeknue60xx","exercise":"Bridged hip abduction","kg":75,"reps":15,"date":"2026-10-17","ts":1792245010458},{"id":"smvcgelm330rt8","exercise":"Bridged hip abduction","kg":75,"reps":15,"date":"2026-10-17","ts":1792245011691},{"id":"smvcgemhjidd1j","exercise":"Bridged hip abduction","kg":75,"reps":15,"date":"2026-10-17","ts":1792245012823},{"id":"smvcgeu1y72y7c","exercise":"Standing calf raise","kg":40,"reps":15,"date":"2026-10-17","ts":1792245022630},{"id":"smvcgev30s78e4","exercise":"Standing calf raise","kg":40,"reps":15,"date":"2026-10-17","ts":1792245023964},{"id":"smvcgf1t6qcjbv","exercise":"Standing calf raise","kg":60,"reps":15,"date":"2026-10-17","ts":1792245032682},{"id":"smvcgfdn3j7r62","exercise":"Romanian deadlift","kg":25,"reps":12,"date":"2026-10-17","ts":1792245048015},{"id":"smvcgfk1r0gg1a","exercise":"Romanian deadlift","kg":30,"reps":10,"date":"2026-10-17","ts":1792245056319},{"id":"smvcgfqdcymm7a","exercise":"Romanian deadlift","kg":35,"reps":8,"date":"2026-10-17","ts":1792245064512},{"id":"smvcgfu4zphjg5","exercise":"Romanian deadlift","kg":40,"reps":8,"date":"2026-10-17","ts":1792245069394},{"id":"smvf69clcv7ytc","exercise":"Incline barbell bench press","kg":40,"reps":20,"date":"2026-10-19","ts":1792409369087,"wu":true},{"id":"smvf6fp71mgamr","exercise":"Incline barbell bench press","kg":80,"reps":15,"date":"2026-10-19","ts":1792409665357,"note":"Easy"},{"id":"smvf6m7cccuox1","exercise":"Incline barbell bench press","kg":120,"reps":6,"date":"2026-10-19","ts":1792409968811,"note":"Better than last week"},{"id":"smvf6uey5lxgdc","exercise":"Incline barbell bench press","kg":130,"reps":3,"date":"2026-10-19","ts":1792410351916},{"id":"smvf7at4ee8ldt","exercise":"Machine shoulder press","kg":20,"reps":12,"date":"2026-10-19","ts":1792411116782},{"id":"smvf7b9pd31uvl","exercise":"Machine shoulder press","kg":25,"reps":11,"date":"2026-10-19","ts":1792411138272},{"id":"smvf7nekkxi81l","exercise":"Machine shoulder press","kg":30,"reps":6,"date":"2026-10-19","ts":1792411704451,"note":"Feel heavy"},{"id":"smvf7tfhfizqox","exercise":"Pec deck","kg":70,"reps":15,"date":"2026-10-19","ts":1792411985571,"note":"Lil struggle 1st set"},{"id":"smvf7z50gd3wan","exercise":"Pec deck","kg":75,"reps":14,"date":"2026-10-19","ts":1792412251935},{"id":"smvf82lyrbjt9a","exercise":"Pec deck","kg":80,"reps":8,"date":"2026-10-19","ts":1792412413874},{"id":"smvf890raxbm3o","exercise":"High cable lateral raise","kg":5,"reps":12,"date":"2026-10-19","ts":1792412712982},{"id":"smvf8a46g8vydp","exercise":"High cable lateral raise","kg":5,"reps":8,"date":"2026-10-19","ts":1792412764071},{"id":"smvf8bskrbbnwx","exercise":"High cable lateral raise","kg":10,"reps":7,"date":"2026-10-19","ts":1792412842347},{"id":"smvfblseaefub1","exercise":"Tricep dips","kg":93,"reps":6,"date":"2026-10-19","ts":1792418347521,"eq":"bw","add":0,"bw":93},{"id":"smvfbly6ahyypo","exercise":"Tricep dips","kg":93,"reps":5,"date":"2026-10-19","ts":1792418355009,"eq":"bw","add":0,"bw":93},{"id":"smvfbmajk7k2xj","exercise":"Overhead cable triceps extension","kg":25,"reps":12,"date":"2026-10-19","ts":1792418371039},{"id":"smvfbmjzztrsq0","exercise":"Overhead cable triceps extension","kg":30,"reps":12,"date":"2026-10-19","ts":1792418383294},{"id":"smvfbmrj6q3e11","exercise":"Overhead cable triceps extension","kg":35,"reps":12,"date":"2026-10-19","ts":1792418393058},{"id":"smvhzsbmjq4mz4","exercise":"Close-grip lat pulldown","kg":55,"reps":15,"date":"2026-10-21","ts":1792579895515},{"id":"smvhzxdyvbv5o0","exercise":"Close-grip lat pulldown","kg":60,"reps":10,"date":"2026-10-21","ts":1792580131831},{"id":"smvi0329kln6jy","exercise":"Close-grip lat pulldown","kg":65,"reps":6,"date":"2026-10-21","ts":1792580396599},{"id":"smvi12qa9a9iwg","exercise":"Reverse cable fly","kg":20,"reps":12,"date":"2026-10-21","ts":1792582060689,"note":"Single hand"},{"id":"smvi12xy7885u6","exercise":"Reverse cable fly","kg":25,"reps":12,"date":"2026-10-21","ts":1792582070623},{"id":"smvi137xkwrv55","exercise":"Reverse cable fly","kg":30,"reps":10,"date":"2026-10-21","ts":1792582083560},{"id":"smvi13u8h9efo8","exercise":"Chest-supported machine row","kg":40,"reps":10,"date":"2026-10-21","ts":1792582112464},{"id":"smvi1439xyx46h","exercise":"Chest-supported machine row","kg":45,"reps":10,"date":"2026-10-21","ts":1792582124181},{"id":"smvi1496ngtta8","exercise":"Chest-supported machine row","kg":50,"reps":10,"date":"2026-10-21","ts":1792582131838},{"id":"smvi1c1f856s94","exercise":"Trapezius shrugs","kg":50,"reps":17,"date":"2026-10-21","ts":1792582495028},{"id":"smvi1iqry5zgqf","exercise":"Trapezius shrugs","kg":60,"reps":15,"date":"2026-10-21","ts":1792582807822},{"id":"smvi1m4xrd4l94","exercise":"Trapezius shrugs","kg":65,"reps":15,"date":"2026-10-21","ts":1792582966142},{"id":"smvi1tkz0gsonh","exercise":"Trapezius shrugs","kg":35,"reps":15,"date":"2026-10-21","ts":1792583313515,"note":"Dumbbells one hand 35","eq":"db","sd":2},{"id":"smvi21agk9qd5d","exercise":"Horizontal close-grip cable row","kg":35,"reps":15,"date":"2026-10-21","ts":1792583673140},{"id":"smvi21gwlxpwve","exercise":"Horizontal close-grip cable row","kg":65,"reps":8,"date":"2026-10-21","ts":1792583681492},{"id":"smvi26l3j68co2","exercise":"Incline seated dumbbell curl","kg":10,"reps":10,"date":"2026-10-21","ts":1792583920207,"note":"Dumbbells","eq":"db","sd":2},{"id":"smvi2aqdc05r4e","exercise":"Incline seated dumbbell curl","kg":12,"reps":8,"date":"2026-10-21","ts":1792584113663,"eq":"db","sd":2},{"id":"smvi2b6setydfs","exercise":"Incline seated dumbbell curl","kg":7,"reps":8,"date":"2026-10-21","ts":1792584134941,"note":"Lil struggle hands locked","eq":"db","sd":2},{"id":"smvi2nc98aq5ho","exercise":"Reverse curl","kg":20,"reps":15,"date":"2026-10-21","ts":1792584701900},{"id":"smvi2ox1htgjjy","exercise":"Reverse curl","kg":25,"reps":12,"date":"2026-10-21","ts":1792584775492},{"id":"smvi2sstskzil1","exercise":"Reverse curl","kg":25,"reps":10,"date":"2026-10-21","ts":1792584956656},{"id":"smvi31w0bcip8m","exercise":"Machine preacher curl","kg":25,"reps":12,"date":"2026-10-21","ts":1792585380683},{"id":"smvi34625uhung","exercise":"Machine preacher curl","kg":30,"reps":7,"date":"2026-10-21","ts":1792585487020},{"id":"smvi3ac2j1ijh4","exercise":"Machine preacher curl","kg":30,"reps":7,"date":"2026-10-21","ts":1792585774746}];
+/* ---------- one-time rename: leg exercises to the template names (sets, split text and targets) ---------- */
+var LEGREN={'leg extensions':'Reclined leg extensions','seated hip abduction':'Bridged hip abduction'}, K_MIG='liftlog.mig.legnames';
+function legName(n){var m=String(n).match(/^(.*?)( · single)?$/),b=LEGREN[m[1].toLowerCase()];return b?b+(m[2]||''):null}
+function migrateLegNames(){
+  try{if(localStorage.getItem(K_MIG))return}catch(e){return}
+  var ns=0,nx=0;
+  S.sets.forEach(function(s){var r=legName(s.exercise);if(r){s.exercise=r;ns++}});
+  S.split.forEach(function(d){
+    var seen={},out=[];
+    d.exercises.forEach(function(e){var r=legName(e)||e;if(r!==e)nx++;if(!seen[r.toLowerCase()]){seen[r.toLowerCase()]=1;out.push(r)}});
+    d.exercises=out;
+    if(d.targets)Object.keys(LEGREN).forEach(function(k){var t=LEGREN[k].toLowerCase();if(d.targets[k]){if(!d.targets[t])d.targets[t]=d.targets[k];delete d.targets[k]}});
+  });
+  if(ns)lsSave();if(nx)saveSplit();
+  try{localStorage.setItem(K_MIG,'1')}catch(e){}
+  if(ns||nx)toast('Renamed '+ns+(ns===1?' set':' sets')+' and '+nx+' split '+(nx===1?'entry':'entries')+' to the template names.');
+}
+
 function seedSplit2(){
   try{if(localStorage.getItem(SEED_KEY))return}catch(e){return}
   var rn={},have={};Object.keys(RENAME).forEach(function(k){rn[k.toLowerCase()]=RENAME[k]});

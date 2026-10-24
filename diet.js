@@ -1,17 +1,18 @@
 /* Lift Log: Diet tab, step counter and treadmill presets. Self-contained; data lives in localStorage. */
 (function(){
 var K='liftlog.diet.v1', KS='liftlog.steps.v1';
-var T={kcal:2100,p:170,c:205,f:55}, STEPS=[8000,10000];
+var T={kcal:2100,p:170,c:230,f:55}, STEPS=[8000,10000];
 /* per 100 g raw/dry */
 var FOODS=[
   {n:'Oats (dry)',k:389,p:16.9,c:66.3,f:6.9},
   {n:'Rice (dry)',k:365,p:7.1,c:80,f:.7},
   {n:'Soya chunks (dry)',k:345,p:52,c:33,f:.5},
   {n:'Potato (raw)',k:77,p:2,c:17.5,f:.1},
-  {n:'Chicken breast (raw)',k:100,p:20.7,c:0,f:2}
+  {n:'Chicken breast (raw)',k:100,p:20.7,c:0,f:2},
+  {n:'Egg whites (raw)',k:52,p:10.9,c:.7,f:.2}
 ];
 var PRE=[
-  {n:'Protein scoop',k:120,p:25,c:3,f:1.5},
+  {n:'Protein scoop (35 g)',k:120,p:25,c:3,f:1.5},
   {n:'Soya chunks 50 g',k:172,p:26,c:16.5,f:.3},
   {n:'2 eggs + 4 whites',k:205,p:24,c:2,f:10},
   {n:'Potato 150 g raw',k:115,p:3,c:26,f:.2},
@@ -22,12 +23,12 @@ var $=function(s,r){return (r||document).querySelector(s)};
 function ymd(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2)}
 function today(){return ymd(new Date())}
 function load(k){try{return JSON.parse(localStorage.getItem(k))||{}}catch(e){return{}}}
-function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function save(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}if(window.LLSync)window.LLSync.touch()}
 function r1(n){return Math.round(n*10)/10}
 function id(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 var D=load(K), SP=load(KS);
-(function prune(){var keep=Object.keys(D).sort().slice(-60),o={};keep.forEach(function(d){o[d]=D[d]});D=o;
-  var ks=Object.keys(SP).sort().slice(-60),s={};ks.forEach(function(d){s[d]=SP[d]});SP=s})();
+(function prune(){var keep=Object.keys(D).sort().slice(-365),o={};keep.forEach(function(d){o[d]=D[d]});D=o;
+  var ks=Object.keys(SP).sort().slice(-365),s={};ks.forEach(function(d){s[d]=SP[d]});SP=s})();
 
 var grid=$('.grid');if(!grid)return;
 var s=document.createElement('section');
@@ -84,18 +85,38 @@ $('#dtG').addEventListener('input',calc);$('#dtFood').addEventListener('change',
 document.addEventListener('visibilitychange',function(){if(!document.hidden)paint()});
 paint();
 
+/* shared with backup/import and cloud sync in app.js */
+(function(){
+  var rx=/^\d{4}-\d{2}-\d{2}$/;
+  function num(v,max){return typeof v==='number'&&isFinite(v)&&v>=0&&v<=max}
+  function okE(e){return e&&typeof e.id==='string'&&typeof e.n==='string'&&e.n.length<=80&&num(e.k,5000)&&num(e.p,1000)&&num(e.c,1000)&&num(e.f,1000)}
+  function cleanD(o){var r={};if(!o||typeof o!=='object')return r;Object.keys(o).forEach(function(k){if(rx.test(k)&&Array.isArray(o[k]))r[k]=o[k].filter(okE).map(function(e){return {id:e.id,n:e.n,k:e.k,p:e.p,c:e.c,f:e.f}})});return r}
+  function cleanS(o){var r={};if(!o||typeof o!=='object')return r;Object.keys(o).forEach(function(k){if(rx.test(k)&&num(o[k],100000))r[k]=Math.round(o[k])});return r}
+  window.LLDiet={
+    get:function(){return {diet:D,steps:SP}},
+    replace:function(o){D=cleanD(o&&o.diet);SP=cleanS(o&&o.steps);save(K,D);save(KS,SP);paint()},
+    countNew:function(o){var n={d:0,s:0},nd=cleanD(o&&o.diet),ns=cleanS(o&&o.steps);
+      Object.keys(nd).forEach(function(k){var h={};(D[k]||[]).forEach(function(e){h[e.id]=1});nd[k].forEach(function(e){if(!h[e.id])n.d++})});
+      Object.keys(ns).forEach(function(k){if(!(ns[k]<=(SP[k]||0)))n.s++});return n},
+    merge:function(o){var nd=cleanD(o&&o.diet),ns=cleanS(o&&o.steps);
+      Object.keys(nd).forEach(function(k){var h={};D[k]=D[k]||[];D[k].forEach(function(e){h[e.id]=1});nd[k].forEach(function(e){if(!h[e.id]){h[e.id]=1;D[k].push(e)}})});
+      Object.keys(ns).forEach(function(k){if(ns[k]>(SP[k]||0))SP[k]=ns[k]});
+      save(K,D);save(KS,SP);paint()}
+  };
+})();
+
 /* treadmill presets in the Cardio panel: fill minutes and distance (km = km/h x minutes / 60) */
 var q=$('[data-cdq="15"]');
 if(q&&q.parentNode){
   var row=document.createElement('div');row.className='field';
-  row.innerHTML='<span class="lbl">Treadmill presets · 5 km/h</span><div class="chips">'+
+  row.innerHTML='<span class="lbl">Treadmill presets · 5 km/h · 3% incline</span><div class="chips">'+
     '<button type="button" class="chip" data-tm="15">Walk 15 min</button>'+
     '<button type="button" class="chip" data-tm="20">Walk 20 min</button></div>';
   q.parentNode.parentNode.appendChild(row);
   row.addEventListener('click',function(e){
     var b=e.target.closest('[data-tm]');if(!b)return;
     var m=+b.dataset.tm,w=$('[data-cdt="walk"]');if(w)w.click();
-    $('#cdMin').value=m;$('#cdKm').value=r1(5*m/60);
+    $('#cdMin').value=m;$('#cdKm').value=r1(5*m/60);var inc=$('#cdInc');if(inc&&!inc.value)inc.value=3;
   });
 }
 })();

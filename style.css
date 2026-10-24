@@ -401,3 +401,10 @@ input[type=text],input[type=number],input[type=date],select,textarea{border-radi
 .dtbar i{display:block;height:100%;background:var(--accent);border-radius:5px;transition:width .3s}
 .dtbar i.over{background:#F2B91B}
 .dietp select{width:100%;min-height:44px}
+
+/* split targets, cues, settings */
+.chip .tg{margin-left:6px;font-size:11px;opacity:.65;font-weight:500}
+#cueHint[hidden]{display:none}
+.hint.cue{width:100%;margin:6px 0 0;line-height:1.5}
+.settings{display:flex;flex-direction:column;gap:8px;margin:14px 0}
+.settings input{width:100%;height:42px}

@@ -1,0 +1,440 @@
+{
+  "version": "1.2",
+  "name": "Jeff Nippard UL / PPL",
+  "workoutSplits": [
+    {
+      "name": "Upper",
+      "weekday": 1,
+      "rest": false,
+      "exercises": [
+        {
+          "exerciseId": "incline-barbell-bench-press",
+          "exerciseName": "Incline barbell bench press",
+          "targetSets": 3,
+          "targetRepsMin": 6,
+          "targetRepsMax": 8,
+          "techniqueCues": [
+            "45° incline",
+            "Slightly narrower grip",
+            "Pause at chest"
+          ]
+        },
+        {
+          "exerciseId": "seated-cable-fly",
+          "exerciseName": "Seated cable fly",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Deep stretch",
+            "Elbows up (\"hugging a big tree\")",
+            "Wide arc"
+          ]
+        },
+        {
+          "exerciseId": "weighted-pull-up",
+          "exerciseName": "Weighted pull-up",
+          "targetSets": 3,
+          "targetRepsMin": 6,
+          "targetRepsMax": 8,
+          "techniqueCues": [
+            "Vertical torso",
+            "Drive elbows down and in",
+            "Chest to bar",
+            "Straps allowed"
+          ]
+        },
+        {
+          "exerciseId": "high-cable-lateral-raise",
+          "exerciseName": "High cable lateral raise",
+          "targetSets": 2,
+          "targetSetsMax": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Pulley set high for stretch tension",
+            "Sweep outward"
+          ]
+        },
+        {
+          "exerciseId": "deficit-pendlay-row",
+          "exerciseName": "Deficit Pendlay row",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Bumper plate deficit",
+            "Torso parallel",
+            "2–3 s negative",
+            "Final set: lengthened partials"
+          ]
+        },
+        {
+          "exerciseId": "overhead-cable-triceps-extension",
+          "exerciseName": "Overhead cable triceps extension",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Step forward from the high pulley",
+            "Load the long head in a stretch"
+          ]
+        },
+        {
+          "exerciseId": "beijing-cable-curl",
+          "exerciseName": "Beijing cable curl",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Step forward from the cable to load the biceps stretched"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Lower",
+      "weekday": 2,
+      "rest": false,
+      "exercises": [
+        {
+          "exerciseId": "lying-leg-curl",
+          "exerciseName": "Lying leg curl",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Do first as a knee warm-up",
+            "Hips flat",
+            "Final set: lengthened partials"
+          ]
+        },
+        {
+          "exerciseId": "pendulum-squat",
+          "exerciseName": "Pendulum squat",
+          "targetSets": 3,
+          "targetSetsMax": 4,
+          "targetRepsMin": 6,
+          "targetRepsMax": 8,
+          "techniqueCues": [
+            "Deep depth for quad and glute stretch",
+            "Last set to failure"
+          ]
+        },
+        {
+          "exerciseId": "romanian-deadlift",
+          "exerciseName": "Romanian deadlift",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Hip hinge",
+            "Neutral spine",
+            "Stop below the knees",
+            "Use straps"
+          ]
+        },
+        {
+          "exerciseId": "reclined-leg-extensions",
+          "exerciseName": "Reclined leg extensions",
+          "targetSets": 1,
+          "targetSetsMax": 2,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Recline the seat back for rectus femoris stretch",
+            "3 s eccentric"
+          ]
+        },
+        {
+          "exerciseId": "bridged-hip-abduction",
+          "exerciseName": "Bridged hip abduction",
+          "targetSets": 2,
+          "targetSetsMax": 3,
+          "targetRepsMin": 12,
+          "targetRepsMax": 15,
+          "techniqueCues": [
+            "Extended hips to align with upper glute medius"
+          ]
+        },
+        {
+          "exerciseId": "standing-calf-raise",
+          "exerciseName": "Standing calf raise",
+          "targetSets": 3,
+          "targetSetsMax": 4,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Full stretch at the bottom",
+            "Final set: hold a 30 s loaded stretch"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rest",
+      "weekday": 3,
+      "rest": true,
+      "note": "15–20 min treadmill walk at 2–5% incline · 8,000–10,000 steps.",
+      "exercises": []
+    },
+    {
+      "name": "Push",
+      "weekday": 4,
+      "rest": false,
+      "exercises": [
+        {
+          "exerciseId": "incline-barbell-bench-press",
+          "exerciseName": "Incline barbell bench press",
+          "targetSets": 3,
+          "targetRepsMin": 6,
+          "targetRepsMax": 8,
+          "techniqueCues": [
+            "Controlled descent",
+            "Chest pause"
+          ]
+        },
+        {
+          "exerciseId": "machine-shoulder-press",
+          "exerciseName": "Machine shoulder press",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Push delts to failure, safely"
+          ]
+        },
+        {
+          "exerciseId": "pec-deck",
+          "exerciseName": "Pec deck",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Final set: 4–5 lengthened partials"
+          ]
+        },
+        {
+          "exerciseId": "high-cable-lateral-raise",
+          "exerciseName": "High cable lateral raise",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Push the weight outward across the body"
+          ]
+        },
+        {
+          "exerciseId": "overhead-cable-triceps-extension",
+          "exerciseName": "Overhead cable triceps extension",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Stretched long-head focus"
+          ]
+        },
+        {
+          "exerciseId": "cable-triceps-pushdown",
+          "exerciseName": "Cable triceps pushdown",
+          "targetSets": 2,
+          "targetSetsMax": 3,
+          "targetRepsMin": 12,
+          "targetRepsMax": 15,
+          "techniqueCues": [
+            "Lighter weight for peak contraction"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Pull",
+      "weekday": 5,
+      "rest": false,
+      "exercises": [
+        {
+          "exerciseId": "close-grip-lat-pulldown",
+          "exerciseName": "Close-grip lat pulldown",
+          "targetSets": 3,
+          "targetRepsMin": 6,
+          "targetRepsMax": 8,
+          "techniqueCues": [
+            "Drive elbows down and in toward the hips"
+          ]
+        },
+        {
+          "exerciseId": "chest-supported-machine-row",
+          "exerciseName": "Chest-supported machine row",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Flared elbows for mid-traps and rhomboids"
+          ]
+        },
+        {
+          "exerciseId": "horizontal-close-grip-cable-row",
+          "exerciseName": "Horizontal close-grip cable row",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Final set: lengthened partials"
+          ]
+        },
+        {
+          "exerciseId": "reverse-cable-fly",
+          "exerciseName": "Reverse cable fly",
+          "targetSets": 3,
+          "targetRepsMin": 12,
+          "targetRepsMax": 15,
+          "techniqueCues": [
+            "Light weight to isolate rear delts",
+            "Keep the upper traps out of it"
+          ]
+        },
+        {
+          "exerciseId": "trapezius-shrugs",
+          "exerciseName": "Trapezius shrugs",
+          "targetSets": 2,
+          "targetSetsMax": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Shrug up and inward toward the ears"
+          ]
+        },
+        {
+          "exerciseId": "beijing-cable-curl",
+          "exerciseName": "Beijing cable curl",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Load the biceps in the lengthened position"
+          ]
+        },
+        {
+          "exerciseId": "machine-preacher-curl",
+          "exerciseName": "Machine preacher curl",
+          "targetSets": 2,
+          "targetSetsMax": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Short-range elbow flexion focus"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Legs",
+      "weekday": 6,
+      "rest": false,
+      "exercises": [
+        {
+          "exerciseId": "seated-leg-curl",
+          "exerciseName": "Seated leg curl",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Warm up the knees",
+            "About 1.5× hamstring growth bias over lying"
+          ]
+        },
+        {
+          "exerciseId": "smith-machine-squat",
+          "exerciseName": "Smith machine squat",
+          "targetSets": 3,
+          "targetSetsMax": 4,
+          "targetRepsMin": 6,
+          "targetRepsMax": 8,
+          "techniqueCues": [
+            "Maximum knee flexion",
+            "Final set to failure"
+          ]
+        },
+        {
+          "exerciseId": "romanian-deadlift",
+          "exerciseName": "Romanian deadlift",
+          "targetSets": 3,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Hinge hips straight back",
+            "Neutral spine"
+          ]
+        },
+        {
+          "exerciseId": "reclined-leg-extensions",
+          "exerciseName": "Reclined leg extensions",
+          "targetSets": 3,
+          "targetRepsMin": 10,
+          "targetRepsMax": 12,
+          "techniqueCues": [
+            "Recline the seat back",
+            "3 s negative"
+          ]
+        },
+        {
+          "exerciseId": "bridged-hip-abduction",
+          "exerciseName": "Bridged hip abduction",
+          "targetSets": 2,
+          "targetSetsMax": 3,
+          "targetRepsMin": 12,
+          "targetRepsMax": 15,
+          "techniqueCues": [
+            "Bridged hips for glute medius"
+          ]
+        },
+        {
+          "exerciseId": "standing-calf-raise",
+          "exerciseName": "Standing calf raise",
+          "targetSets": 3,
+          "targetSetsMax": 4,
+          "targetRepsMin": 8,
+          "targetRepsMax": 10,
+          "techniqueCues": [
+            "Final set: hold a 30 s loaded stretch"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Rest",
+      "weekday": 0,
+      "rest": true,
+      "note": "Complete recovery.",
+      "exercises": []
+    }
+  ],
+  "cardioPreset": {
+    "type": "walk",
+    "durationMinutes": [
+      15,
+      20
+    ],
+    "inclinePercentage": {
+      "min": 2,
+      "max": 5,
+      "default": 3
+    },
+    "speedKmh": 5,
+    "dailySteps": {
+      "min": 8000,
+      "max": 10000
+    }
+  },
+  "dietTargets": {
+    "kcal": 2100,
+    "proteinG": 170,
+    "carbsG": 230,
+    "fatG": 55,
+    "note": "680 + 920 + 495 = 2,095 kcal"
+  },
+  "userProfileDefaults": {
+    "targetWeightLossRatePercent": 0.75,
+    "oneRmFormula": "epley"
+  }
+}
